@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+# Delete all livebook images, ignoring any errors
+docker rmi $(docker images 'livebook/livebook' -a -q) --force > /dev/null 2>&1 || true
+
+# Download the latest livebook image
+docker pull livebook/livebook:latest
