@@ -1,12 +1,14 @@
 #!/bin/sh
 set -e
 
-# See https://github.com/livebook-dev/livebook#docker
-docker run \
-  -p 8080:8080 \
-  -p 8081:8081 \
-  -u $(id -u):$(id -g) \
-  -v $(pwd):/data \
-  -e LIVEBOOK_COOKIE=hello_livebook \
-  -e LIVEBOOK_PASSWORD=hello_livebook \
-  livebook/livebook
+cookie=$(cat './cookie.txt')
+
+(
+  cd ./livebook
+
+  MIX_ENV=prod \
+    LIVEBOOK_COOKIE="$cookie" \
+    LIVEBOOK_HOME="$HOME/hello_livebook/notebooks" \
+    LIVEBOOK_TOKEN_ENABLED=false \
+    iex -S mix phx.server
+)

@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+cookie=$(cat './cookie.txt')
+
+(
+  cd ./livebook
+
+  MIX_ENV=dev \
+    LIVEBOOK_COOKIE="$cookie" \
+    iex -S mix
+)

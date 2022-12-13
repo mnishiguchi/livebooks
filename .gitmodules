@@ -1,0 +1,3 @@
+[submodule "livebook"]
+	path = livebook
+	url = https://github.com/livebook-dev/livebook

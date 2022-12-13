@@ -1,8 +1,22 @@
 #!/bin/sh
 set -e
 
-# Delete all livebook images, ignoring any errors
-docker rmi $(docker images 'livebook/livebook' -a -q) --force > /dev/null 2>&1 || true
+current_dir=$(basename $(pwd))
 
-# Download the latest livebook image
-docker pull livebook/livebook:latest
+if [ "$current_dir" == "hello_livebook" ]
+then
+  # Make this project available from the home dir
+  ln -sF $(pwd) $HOME/
+else
+  echo "Please go to \"hello_livebook\" project directory first"
+  exit 1
+fi
+
+# Update the local copy of livebook source code
+git submodule update --remote --merge
+
+(
+  cd ./livebook
+
+  mix deps.get
+)
