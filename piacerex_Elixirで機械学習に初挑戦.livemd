@@ -1,0 +1,387 @@
+# Elixirで機械学習に初挑戦 by piacerex
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.4"},
+  {:axon, "~> 0.3"},
+  {:exla, "~> 0.4"},
+  {:table_rex, "~> 3.1"},
+  {:kino_vega_lite, "~> 0.1.7"}
+])
+```
+
+## 資料
+
+* [Eixirで機械学習に初挑戦①：基礎知識とLivebook＋Nx＋Axonによる機械学習入門](https://qiita.com/piacerex/items/0871b54b41128d426da5) by piacerex
+* [Eixirで機械学習に初挑戦②：機械学習コードの解説と「学習データの可視化」「学習過程のアニメ化」](https://qiita.com/piacerex/items/96220f6954fc1c6fe718) by piacerex
+* [Eixirで機械学習に初挑戦③：「予測」の可視化と「精度」に変化を与える要因、「学習過程グラフ」の読み方 ※最新Livebook 0.8に対応](https://qiita.com/piacerex/items/2c78dd26f879e6733f4d) by piacerex
+* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+
+## Nxの練習
+
+行列を`Nx.tensor`で作り、各値を3で除算するというNxのコード
+
+```elixir
+Nx.tensor([[1, 2], [3, 4]])
+|> Nx.divide(3)
+```
+
+```elixir
+Nx.tensor(for _ <- 1..32, do: [Enum.random(0..1)])
+```
+
+## 教師あり学習を実践：ORの予測
+
+* ビット演算などで使う「OR」を教師あり学習させて予測させる
+* ラベルは、入力1と入力2のOR演算を行えば計算できるため、教師あり学習のためのラベルの準備を手作業で行わなくて済む
+
+### ORのビット演算
+
+| input1 | input2 | output |
+| ------ | ------ | ------ |
+| 0      | 0      | 0      |
+| 0      | 1      | 1      |
+| 1      | 0      | 1      |
+| 1      | 1      | 1      |
+
+![](https://camo.qiitausercontent.com/243c92070775c1305ac85c5dbf04b28b4fd77d4e/68747470733a2f2f71696974612d696d6167652d73746f72652e73332e61702d6e6f727468656173742d312e616d617a6f6e6177732e636f6d2f302f3135353432332f65313462336436342d396336332d656132642d643632352d6664303639653861373338332e706e67)
+
+## ⅰ）学習／テストデータとラベルの準備
+
+### 準備するもの
+
+* 学習に使うデータ
+* テストに使うデータ
+* データが入力されたときに期待する正解である「ラベル」
+
+### ラベル生成
+
+* 通常は、機械的なラベル生成はできないため、人が学習／テストデータを見て、ラベルを付与
+
+```elixir
+## 学習データとラベルのセットを1000件生成
+
+train_datas =
+  Stream.repeatedly(fn ->
+    input1 = Nx.tensor(for _ <- 1..32, do: [Enum.random(0..1)])
+    input2 = Nx.tensor(for _ <- 1..32, do: [Enum.random(0..1)])
+
+    data = %{"input1" => input1, "input2" => input2}
+    label = Nx.logical_or(input1, input2)
+
+    # 学習データとラベルをセットにする
+    {data, label}
+  end)
+  |> Enum.take(1000)
+```
+
+### 学習データ1セットの可視化
+
+* 「Smart」Cellで気軽にグラフを描画できる
+* 「Smart」Cellはコード化することができる
+
+```elixir
+## グラフ描画可能なデータを準備
+
+# 4点が全て重なると、どれだけ生成されたかが分かりにくいので、各値を適度に揺らす
+gen_random = fn -> Enum.random(0..1) + Enum.random(0..5) / 100 end
+
+input1 = Nx.tensor(for _ <- 1..32, do: [gen_random.()])
+input2 = Nx.tensor(for _ <- 1..32, do: [gen_random.()])
+
+datas =
+  Enum.zip([Nx.to_flat_list(input1), Nx.to_flat_list(input2)])
+  |> Enum.map(fn {input1, input2} ->
+    %{input1: input1, input2: input2}
+  end)
+```
+
+```elixir
+## グラフを描画
+
+VegaLite.new(width: 600, height: 400)
+|> VegaLite.data_from_values(datas, only: ["input1", "input2"])
+|> VegaLite.mark(:point)
+|> VegaLite.encode_field(:x, "input1", type: :quantitative)
+|> VegaLite.encode_field(:y, "input2", type: :quantitative)
+```
+
+## ⅱ）モデルの学習
+
+* ⅰ）で作った学習データを入力したとき、そのラベルが出力となるよう、モデルに「学習」をさせる
+* 「学習」とは、「活性化関数」による通過／非活性の度合い（「重み」）を調整することを指す
+* [Axon.Loop](https://hexdocs.pm/axon/Axon.Loop.html)モジュールにある学習機能を使って、モデルの学習を行う
+
+### シグモイド関数
+
+* 二値分類、つまり0/1を分類するための関数
+
+### 活性化関数（Activation function）
+
+* 入力されたデータを、次の層に通過させるかを決定するための関数
+* 入力値を別の数値に変換して出力
+* [活性化関数（Activation function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2003/26/news012.html)
+
+### ReLU（Rectified Linear Unit）
+
+* 入力値が0以下の場合には出力値が常に0、入力値が0より上の場合には出力値が入力値と同じ値となる関数
+* [［活性化関数］ReLU（Rectified Linear Unit）／ランプ関数とは？](https://atmarkit.itmedia.co.jp/ait/articles/2003/11/news016.html)
+
+```elixir
+## ニューラルネットワーク（モデル）の構築
+
+require Axon
+
+# 入力層：学習（もしくは予測）で入力されるデータの形を定義
+input1 = Axon.input("input1", shape: {nil, 1})
+input2 = Axon.input("input2", shape: {nil, 1})
+
+# 構築したモデル
+model =
+  Axon.concatenate(input1, input2)
+  # 中間層：活性化関数で通過させるか決定
+  |> Axon.dense(8, activation: :relu)
+  # 出力層：シグモイド関数で二値分類
+  |> Axon.dense(1, activation: :sigmoid)
+
+# モデルの入出力を表示
+Axon.Display.as_table(model, Nx.template({1, 1}, :s64))
+|> IO.puts()
+```
+
+### 正解率（Accuracy）
+
+* 正しく予測されたサンプルの割合
+* [【初心者向け】 機械学習におけるクラス分類の評価指標の解説](https://tech-blog.optim.co.jp/entry/2021/05/31/100000#%E6%AD%A3%E8%A7%A3%E7%8E%87Accuracy)
+
+### 損失率（loss）
+
+* 損失関数によってによって計算される
+* 分類タスクではクロスエントロピーがよく用いられる
+* [損失関数（Loss function）とは？　誤差関数／コスト関数／目的関数との違い](https://atmarkit.itmedia.co.jp/ait/articles/2104/15/news030.html)
+
+### バイナリクロスエントロピー
+
+* 結果が「1」である確率を求める関数
+* 結果が「0.5」以上なら「1」、「0.5」未満なら「0」とみなす
+* [Cross-Entropy LossとBinary Cross-Entropy Lossの式と違いについて（クラス分類）](https://knowwell-livewell.hatenablog.com/entry/2022/02/20/010512)
+
+### 最適化アルゴリズム
+
+* 「重み」を調整する量をコントロールする関数
+* [[AI入門] ディープラーニングの仕組み　～その4：最適化アルゴリズムを比較してみた～](https://tech-lab.sios.jp/archives/21823)
+
+### 確率的勾配降下法（stochastic gradient descent）
+
+* ランダムに取り出した学習データの一群から学習
+* 「イイ感じに重みを調整してくれる」
+* [確率的勾配降下法の大雑把な意味](https://mathwords.net/sgd)
+
+### エポック数
+
+* 通常であれば10回くらい必要
+* [エポック(epoch)数とは【機械学習 / Deep Learning】](https://www.st-hakky-blog.com/entry/2017/01/17/165137)
+
+```elixir
+epochs_input = Kino.Input.number("Epochs")
+```
+
+```elixir
+## モデルの学習
+
+# 学習結果状態
+trained_state =
+  model
+  |> Axon.Loop.trainer(:binary_cross_entropy, :sgd)
+  |> Axon.Loop.metric(:accuracy, "Accuracy")
+  |> Axon.Loop.run(train_datas, %{},
+    epochs: Kino.Input.read(epochs_input) || 5,
+    iterations: 1000,
+    compiler: EXLA
+  )
+```
+
+### 学習過程のアニメーション化
+
+<!-- livebook:{"break_markdown":true} -->
+
+「学習」を可視化向けに関数化
+
+```elixir
+fit = fn model, datas ->
+  model
+  |> Axon.Loop.trainer(:binary_cross_entropy, :sgd)
+  |> Axon.Loop.metric(:accuracy, "Accuracy")
+  |> Axon.Loop.run(datas, %{}, compiler: EXLA)
+end
+```
+
+「学習データ2つ（input1、input2）」と「学習データによる分類（x、y）」の2系統のレイヤーをグラフ化
+
+```elixir
+# 「学習データ2つ（input1、input2）」と「学習データによる分類（x、y）」の2系統のレイヤーをグラフ化
+graph =
+  VegaLite.new(width: 600, height: 400)
+  |> VegaLite.layers([
+    VegaLite.new()
+    |> VegaLite.mark(:point, tooltip: true)
+    |> VegaLite.encode_field(:x, "input1", type: :quantitative)
+    |> VegaLite.encode_field(:y, "input2", type: :quantitative),
+    VegaLite.new()
+    |> VegaLite.mark(:line)
+    |> VegaLite.encode_field(:x, "x", type: :quantitative)
+    |> VegaLite.encode_field(:y, "y", type: :quantitative)
+  ])
+  |> Kino.VegaLite.new()
+  |> Kino.render()
+
+# 「学習データ2つ（input1、input2）」と「学習データによる分類（x、y）」をグラフに流し込む処理
+plot = fn model, datas, model_state ->
+  input1 = datas |> Enum.map(&(elem(&1, 0)["input1"] |> Nx.to_flat_list())) |> List.flatten()
+  input2 = datas |> Enum.map(&(elem(&1, 0)["input2"] |> Nx.to_flat_list())) |> List.flatten()
+
+  x =
+    for(i <- 0..99, do: i / 100)
+    |> Nx.tensor()
+    |> Nx.new_axis(0)
+    |> Nx.transpose()
+
+  y = Axon.predict(model, model_state, %{"input1" => x, "input2" => x})
+
+  points =
+    Enum.zip([input1, input2, Nx.to_flat_list(x), Nx.to_flat_list(y)])
+    |> Enum.map(fn {input1, input2, x, y} ->
+      %{input1: input1, input2: input2, x: x, y: y}
+    end)
+
+  Kino.VegaLite.clear(graph)
+  Kino.VegaLite.push_many(graph, points)
+end
+```
+
+```elixir
+for _ <- 1..15 do
+  model_state = fit.(model, train_datas)
+  plot.(model, train_datas, model_state)
+end
+```
+
+## ⅲ）テストデータによる評価
+
+* ⅰ）で作ったテストデータを学習済みモデルに入力した結果が、いかにラベルと一致するかを評価
+* テストが不要なほどカンタンな例のため、今回は割愛
+
+## ⅳ）未知データによる予測
+
+* ⅲ）で精度が充分な状態になっていることが前提
+* 学習データには存在しないデータで、期待するデータが出力（予測、識別）されることを確認
+  * 期待する精度が出ないケースを捕捉
+  * 期待以下が頻出する場合
+    * モデルの見直し
+    * 精度が出ないケースをサポート対象外とする
+* 精度を定期的にチェック
+* このタスクは、開発した学習済みモデルを本番運用に回した後も必要
+
+```elixir
+Axon.predict(model, trained_state, %{
+  "input1" => Nx.tensor([[0]]),
+  "input2" => Nx.tensor([[0]])
+})
+```
+
+```elixir
+Axon.predict(model, trained_state, %{
+  "input1" => Nx.tensor([[0]]),
+  "input2" => Nx.tensor([[1]])
+})
+```
+
+```elixir
+Axon.predict(model, trained_state, %{
+  "input1" => Nx.tensor([[1]]),
+  "input2" => Nx.tensor([[0]])
+})
+```
+
+```elixir
+Axon.predict(model, trained_state, %{
+  "input1" => Nx.tensor([[1]]),
+  "input2" => Nx.tensor([[1]])
+})
+```
+
+### 予測の可視化
+
+```elixir
+epochs_input = Kino.Input.number("Epochs")
+```
+
+```elixir
+predicts =
+  1..5
+  |> Enum.map(fn _ ->
+    trained_state =
+      model
+      |> Axon.Loop.trainer(:binary_cross_entropy, :sgd)
+      |> Axon.Loop.metric(:accuracy, "Accuracy")
+      |> Axon.Loop.run(train_datas, %{},
+        epochs: Kino.Input.read(epochs_input) || 1,
+        iteration: 1000,
+        compiler: EXLA
+      )
+
+    [
+      %{
+        x: 0 + Enum.random(0..3) / 100,
+        y:
+          Axon.predict(model, trained_state, %{
+            "input1" => Nx.tensor([[0]]),
+            "input2" => Nx.tensor([[0]])
+          })
+          |> Nx.to_flat_list()
+          |> List.first()
+      },
+      %{
+        x: 0.1 + Enum.random(0..3) / 100,
+        y:
+          Axon.predict(model, trained_state, %{
+            "input1" => Nx.tensor([[0]]),
+            "input2" => Nx.tensor([[1]])
+          })
+          |> Nx.to_flat_list()
+          |> List.first()
+      },
+      %{
+        x: 0.9 - Enum.random(0..3) / 100,
+        y:
+          Axon.predict(model, trained_state, %{
+            "input1" => Nx.tensor([[1]]),
+            "input2" => Nx.tensor([[0]])
+          })
+          |> Nx.to_flat_list()
+          |> List.first()
+      },
+      %{
+        x: 1 - Enum.random(0..3) / 100,
+        y:
+          Axon.predict(model, trained_state, %{
+            "input1" => Nx.tensor([[1]]),
+            "input2" => Nx.tensor([[1]])
+          })
+          |> Nx.to_flat_list()
+          |> List.first()
+      }
+    ]
+  end)
+  |> List.flatten()
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"point","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"predicts","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400)
+|> VegaLite.data_from_values(predicts, only: ["x", "y"])
+|> VegaLite.mark(:point)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
