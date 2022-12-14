@@ -19,7 +19,7 @@ Nx.global_default_backend(EXLA.Backend)
 
 ## Text to image
 
-<!-- livebook:{"attrs":{"compiler":"exla","num_images_per_prompt":4,"num_steps":40,"seed":null,"sequence_length":50,"task_id":"text_to_image","variant_id":"stable_diffusion_classic_disney"},"chunks":[[0,1229],[1231,559]],"kind":"Elixir.KinoBumblebee.TaskCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":{"compiler":"exla","num_images_per_prompt":4,"num_steps":40,"seed":null,"sequence_length":50,"task_id":"text_to_image","variant_id":"stable_diffusion_ghibli"},"chunks":[[0,1223],[1225,552]],"kind":"Elixir.KinoBumblebee.TaskCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 repository_id = "nitrosocke/Ghibli-Diffusion"
@@ -61,9 +61,7 @@ serving =
     compile: [batch_size: 1, sequence_length: 50],
     defn_options: [compiler: EXLA]
   )
-```
 
-```elixir
 text_input = Kino.Input.textarea("Text", default: "ghibli style numbat in forest")
 form = Kino.Control.form([text: text_input], submit: "Run")
 frame = Kino.Frame.new()
