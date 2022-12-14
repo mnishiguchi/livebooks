@@ -1,10 +1,23 @@
 # Bumblebee
 
-## TOC
+## About
+
+* https://github.com/elixir-nx/bumblebee
+
+## Notebooks
+
+* [examples](http://localhost:8080/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fexamples.livemd)
+
+* [stable_diffusion](http://localhost:8080/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)
 
 * [stable_diffusion_anime](./stable_diffusion_anime.livemd)
+
 * [stable_diffusion_classic_disney](./stable_diffusion_classic_disney.livemd)
+
 * [stable_diffusion_ghibli](./stable_diffusion_ghibli.livemd)
+
 * [stable_diffusion_modern_disney](./stable_diffusion_modern_disney.livemd)
+
 * [stable_diffusion_redshift](./stable_diffusion_redshift.livemd)
-* [stable_diffusion](./stable_diffusion.livemd)
+
+* [stable_diffusion](http://localhost:8080/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)

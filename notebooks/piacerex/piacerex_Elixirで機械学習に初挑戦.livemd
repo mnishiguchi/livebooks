@@ -17,6 +17,16 @@ Mix.install([
 * [Eixirで機械学習に初挑戦③：「予測」の可視化と「精度」に変化を与える要因、「学習過程グラフ」の読み方 ※最新Livebook 0.8に対応](https://qiita.com/piacerex/items/2c78dd26f879e6733f4d) by piacerex
 * [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
 
+## 目標
+
+* 教師あり学習
+* 非線形分類によって二値分類が実現していることを理解する
+* 学習データの可視化
+* 学習過程のアニメーション化
+* 予測の可視化
+* 学習回数や学習率による精度の変化
+* 学習グラフの読み方
+
 ## Nxの練習
 
 行列を`Nx.tensor`で作り、各値を3で除算するというNxのコード
@@ -169,13 +179,19 @@ Axon.Display.as_table(model, Nx.template({1, 1}, :s64))
 ### 最適化アルゴリズム
 
 * 「重み」を調整する量をコントロールする関数
+* 精度に影響する
 * [[AI入門] ディープラーニングの仕組み　～その4：最適化アルゴリズムを比較してみた～](https://tech-lab.sios.jp/archives/21823)
 
 ### 確率的勾配降下法（stochastic gradient descent）
 
 * ランダムに取り出した学習データの一群から学習
 * 「イイ感じに重みを調整してくれる」
+* 「重み」の更新
+  *「学習率（Learning Rate）」というパラメータによって調整可能
+  * 更新完了までの速さ／遅さ（同時に雑さ／緻密さ）が変わる
 * [確率的勾配降下法の大雑把な意味](https://mathwords.net/sgd)
+* [確率的勾配降下法とは何か、をPythonで動かして解説する](https://qiita.com/kenmatsu4/items/d282054ddedbd68fecb0)
+* See [Axon.Optimizers.sgd/2](https://hexdocs.pm/axon/Axon.Optimizers.html#sgd/2)
 
 ### エポック数
 
@@ -183,7 +199,11 @@ Axon.Display.as_table(model, Nx.template({1, 1}, :s64))
 * [エポック(epoch)数とは【機械学習 / Deep Learning】](https://www.st-hakky-blog.com/entry/2017/01/17/165137)
 
 ```elixir
-epochs_input = Kino.Input.number("Epochs")
+epochs_input = Kino.Input.number("Epochs", default: 3)
+```
+
+```elixir
+learning_rate_input = Kino.Input.number("Learning rate", default: 0.01)
 ```
 
 ```elixir
@@ -192,10 +212,13 @@ epochs_input = Kino.Input.number("Epochs")
 # 学習結果状態
 trained_state =
   model
-  |> Axon.Loop.trainer(:binary_cross_entropy, :sgd)
+  |> Axon.Loop.trainer(
+    :binary_cross_entropy,
+    Axon.Optimizers.sgd(Kino.Input.read(learning_rate_input))
+  )
   |> Axon.Loop.metric(:accuracy, "Accuracy")
   |> Axon.Loop.run(train_datas, %{},
-    epochs: Kino.Input.read(epochs_input) || 5,
+    epochs: Kino.Input.read(epochs_input),
     iterations: 1000,
     compiler: EXLA
   )
@@ -210,7 +233,7 @@ trained_state =
 ```elixir
 fit = fn model, datas ->
   model
-  |> Axon.Loop.trainer(:binary_cross_entropy, :sgd)
+  |> Axon.Loop.trainer(:binary_cross_entropy, Axon.Optimizers.sgd(0.05))
   |> Axon.Loop.metric(:accuracy, "Accuracy")
   |> Axon.Loop.run(datas, %{}, compiler: EXLA)
 end
@@ -313,7 +336,11 @@ Axon.predict(model, trained_state, %{
 ### 予測の可視化
 
 ```elixir
-epochs_input = Kino.Input.number("Epochs")
+epochs_input = Kino.Input.number("Epochs", default: 3)
+```
+
+```elixir
+learning_rate_input = Kino.Input.number("Learning rate", default: 0.01)
 ```
 
 ```elixir
@@ -322,10 +349,13 @@ predicts =
   |> Enum.map(fn _ ->
     trained_state =
       model
-      |> Axon.Loop.trainer(:binary_cross_entropy, :sgd)
+      |> Axon.Loop.trainer(
+        :binary_cross_entropy,
+        Axon.Optimizers.sgd(Kino.Input.read(learning_rate_input))
+      )
       |> Axon.Loop.metric(:accuracy, "Accuracy")
       |> Axon.Loop.run(train_datas, %{},
-        epochs: Kino.Input.read(epochs_input) || 1,
+        epochs: Kino.Input.read(epochs_input),
         iteration: 1000,
         compiler: EXLA
       )

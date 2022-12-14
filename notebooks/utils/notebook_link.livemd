@@ -1,0 +1,58 @@
+# Livebook notebook links
+
+```elixir
+Mix.install([{:kino, "~> 0.8.0"}])
+```
+
+## Create Livebook badges for your notebooks
+
+* https://livebook.dev/badge
+
+## Generate "Run in Livebook" URL
+
+```elixir
+default = "https://github.com/elixir-nx/bumblebee/blob/main/notebooks/examples.livemd"
+livemd_src_url_input = Kino.Input.textarea("Notebook source URL", default: default)
+```
+
+```elixir
+livemd_src_url = Kino.Input.read(livemd_src_url_input)
+
+run_in_livebook_url = "https://livebook.dev/run?url=" <> URI.encode_www_form(livemd_src_url)
+
+IO.puts(run_in_livebook_url)
+```
+
+## Generate "Run in Livebook" button
+
+![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)
+![Run in Livebook](https://livebook.dev/badge/v1/black.svg)
+![Run in Livebook](https://livebook.dev/badge/v1/gray.svg)
+![Run in Livebook](https://livebook.dev/badge/v1/pink.svg)
+
+```elixir
+select_options = ~w[blue black gray pink] |> Enum.map(&{&1, String.capitalize(&1)})
+button_color_input = Kino.Input.select("Button color", select_options)
+```
+
+```elixir
+button_color = Kino.Input.read(button_color_input)
+
+"[![Run in Livebook](https://livebook.dev/badge/v1/#{button_color}.svg)](#{run_in_livebook_url})"
+|> IO.puts()
+```
+
+## Generate "Run notebook" URL
+
+```elixir
+default = "http://localhost:8080"
+livebook_url_input = Kino.Input.textarea("Livebook URL", default: default)
+```
+
+```elixir
+livebook_url = Kino.Input.read(livebook_url_input)
+livemd_src_url = Kino.Input.read(livemd_src_url_input)
+
+[livebook_url, "/import?url=", URI.encode_www_form(livemd_src_url)]
+|> IO.puts()
+```
