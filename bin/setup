@@ -3,12 +3,12 @@ set -e
 
 current_dir=$(basename $(pwd))
 
-if [ "$current_dir" == "hello_livebook" ]
+if [ "$current_dir" == "livebooks" ]
 then
   # Make this project available from the home dir
   ln -sF $(pwd) $HOME/
 else
-  echo "Please go to \"hello_livebook\" project directory first"
+  echo "Please go to \"livebooks\" project directory first"
   exit 1
 fi
 

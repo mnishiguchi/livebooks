@@ -1,6 +1,6 @@
-# mnishiguchi hello_livebook notebooks
+# mnishiguchi Livebooks
 
-## TOC
+## Index
 
 * [bumblebee](./bumblebee/index.livemd)
 * [piacerex](./piacerex/index.livemd)
