@@ -10,22 +10,23 @@ Mix.install([
 ])
 ```
 
-## 資料
+## 概要
 
-* [Eixirで機械学習に初挑戦①：基礎知識とLivebook＋Nx＋Axonによる機械学習入門](https://qiita.com/piacerex/items/0871b54b41128d426da5) by piacerex
-* [Eixirで機械学習に初挑戦②：機械学習コードの解説と「学習データの可視化」「学習過程のアニメ化」](https://qiita.com/piacerex/items/96220f6954fc1c6fe718) by piacerex
-* [Eixirで機械学習に初挑戦③：「予測」の可視化と「精度」に変化を与える要因、「学習過程グラフ」の読み方 ※最新Livebook 0.8に対応](https://qiita.com/piacerex/items/2c78dd26f879e6733f4d) by piacerex
-* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
-
-## 目標
-
-* 教師あり学習
+* 教師あり学習（ORの予測）
+* 二値分類
 * 非線形分類によって二値分類が実現していることを理解する
 * 学習データの可視化
 * 学習過程のアニメーション化
 * 予測の可視化
 * 学習回数や学習率による精度の変化
 * 学習グラフの読み方
+
+## 資料
+
+* [Eixirで機械学習に初挑戦①：基礎知識とLivebook＋Nx＋Axonによる機械学習入門](https://qiita.com/piacerex/items/0871b54b41128d426da5) by piacerex
+* [Eixirで機械学習に初挑戦②：機械学習コードの解説と「学習データの可視化」「学習過程のアニメ化」](https://qiita.com/piacerex/items/96220f6954fc1c6fe718) by piacerex
+* [Eixirで機械学習に初挑戦③：「予測」の可視化と「精度」に変化を与える要因、「学習過程グラフ」の読み方 ※最新Livebook 0.8に対応](https://qiita.com/piacerex/items/2c78dd26f879e6733f4d) by piacerex
+* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
 
 ## Nxの練習
 

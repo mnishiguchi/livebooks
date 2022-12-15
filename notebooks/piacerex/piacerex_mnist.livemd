@@ -1,0 +1,234 @@
+# Elixirでディープラーニング①：手書き文字識別（MNIST）by piacerex
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.4"},
+  {:axon, "~> 0.3"},
+  {:exla, "~> 0.4"},
+  {:scidata, "~> 0.1"},
+  {:table_rex, "~> 3.1"},
+  {:kino_vega_lite, "~> 0.1.7"}
+])
+```
+
+## 概要
+
+* 教師あり学習（MNIST手書き文字識別）
+* 多クラス分類
+
+## 資料
+
+* [Elixirでディープラーニング①：手書き文字識別（MNIST）をLivebook＋Axonで](https://qiita.com/piacerex/items/9cf4f328222103458167) by piacerex
+* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+
+## MNIST手書き文字識別
+
+* 手書き文字画像が、0～9の数字のうち、どの数字により適合するかを識別する
+* MNISTデータセット
+  * 60,000文字分のデータ
+  * 手書き文字画像（1文字は28 x 28ピクセル）
+  * それぞれの画像が何の数字であるかが0～9で入っているラベル
+
+![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2Fb43f7923-a21e-674b-b639-adf249835d80.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=7000b9464b86518b6e0051ed38486a78)
+
+![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2F45fd074d-4856-83cc-e13b-744a7fd3c25b.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=6165243802f48c56ce17d106a66a8377)
+
+## ⅰ）学習データと検証データの準備
+
+### MNISTデータセットをダウンロード
+
+```elixir
+{datas_raw, labels_raw} = Scidata.MNIST.download()
+```
+
+### 手書き文字画像データを1文字ずつで扱えるようにする
+
+```elixir
+{data_bins, type, shape} = datas_raw
+
+# 60,000文字分の手書き文字画像のバイナリ
+<<_::binary>> = data_bins
+# 型
+{:u, 8} = type
+# 文字数、バイナリの次元数、横ピクセル数、縦ピクセル数
+{60000, 1, 28, 28} = shape
+
+datas =
+  data_bins
+  |> Nx.from_binary(type)
+  # 一文字分の手書き文字画像データは、784ピクセル（28 x 28）の1次元行列
+  |> Nx.reshape({60000, 28 * 28})
+  |> Nx.divide(255.0)
+  |> dbg()
+
+:ok
+```
+
+### ラベルを1文字ずつで扱えるようにする
+
+```elixir
+{label_bins, type, shape} = labels_raw
+
+# 60,000文字分の手書き文字画像のラベル
+<<_::binary>> = label_bins
+{:u, 8} = type
+{60000} = shape
+
+labels =
+  label_bins
+  |> Nx.from_binary(type)
+  # 1文字ずつで扱えるように分解
+  |> Nx.new_axis(-1)
+  # ラベルを数値からクラス行列に変形
+  |> Nx.equal(Nx.tensor(Enum.to_list(0..9)))
+  |> dbg()
+
+:ok
+```
+
+#### 手書き文字画像をヒートマップ表示
+
+```elixir
+index_input = Kino.Input.number("Index", default: 0)
+```
+
+```elixir
+index = Kino.Input.read(index_input)
+
+datas[index]
+# ヒートマップ表示できるよう、28 x 28の2次元行列に変形
+|> Nx.reshape({28, 28})
+|> Nx.to_heatmap()
+|> dbg()
+
+# ラベルを確認
+labels[index]
+|> inspect()
+|> IO.puts()
+
+:ok
+```
+
+### 学習データと検証データの分割
+
+* 手書き文字データとラベルの両方を、学習データ80%、検証データ20%に分割
+* バッチ学習
+  * 学習速度・並列度アップ
+  * 過学習回避
+  * [【人工知能】機械学習で行われる学習方法について。バッチ・ミニバッチ・オンライン学習。](https://fresopiya.com/2019/05/24/batchlearning/)
+
+```elixir
+{train_datas, test_datas} =
+  datas
+  # 32文字ごとにバッチ化
+  |> Nx.to_batched(32)
+  # 80%をtrainに、20%をtestに
+  |> Enum.split(round(60000 * 0.8 / 32))
+  |> dbg
+
+{train_labels, test_labels} =
+  labels
+  # 32文字ごとにバッチ化
+  |> Nx.to_batched(32)
+  # 80%をtrainに、20%をtestに
+  |> Enum.split(round(60000 * 0.8 / 32))
+  |> dbg
+
+:ok
+```
+
+### N番目のバッチの全32文字の手書き文字画像をヒートマップ表示
+
+```elixir
+batch_index_input = Kino.Input.number("Batch index", default: 0)
+```
+
+```elixir
+batch_index = Kino.Input.read(batch_index_input)
+
+for test_data <- test_datas do
+  test_data[batch_index]
+  |> Nx.reshape({28, 28})
+  |> Nx.to_heatmap()
+end
+```
+
+```elixir
+batch_index = Kino.Input.read(batch_index_input)
+
+for test_label <- test_labels do
+  test_label[batch_index]
+end
+```
+
+## ⅱ）モデルの学習
+
+```elixir
+require Axon
+
+model =
+  Axon.input("input", shape: {nil, 784})
+  |> Axon.dense(128, activation: :relu)
+  |> Axon.dropout()
+  |> Axon.dense(10, activation: :softmax)
+
+Axon.Display.as_table(model, Nx.template({1, 784}, :f32))
+|> IO.puts()
+
+alias Axon.Loop.State
+
+trained_state =
+  model
+  |> Axon.Loop.trainer(:categorical_cross_entropy, Axon.Optimizers.adamw(0.005))
+  # 計算過程を表示するための処理
+  |> Axon.Loop.metric(:accuracy, "Accuracy")
+  |> Axon.Loop.handle(:iteration_completed, fn state ->
+    %State{epoch: epoch, iteration: iteration, metrics: metrics, step_state: step_state} = state
+    %{loss: loss} = step_state
+    "Loss: #{:io_lib.format('~.5f', [Nx.to_number(loss)])}"
+
+    metrics =
+      metrics
+      |> Enum.map(fn {k, v} -> "#{k}: #{:io_lib.format('~.5f', [Nx.to_number(v)])}" end)
+      |> Enum.join(" ")
+
+    IO.write("\rEpoch: #{Nx.to_number(epoch)}, Batch: #{Nx.to_number(iteration)}, #{metrics}")
+    {:continue, state}
+  end)
+  |> Axon.Loop.run(Stream.zip(train_datas, train_labels), %{}, epochs: 3, compiler: EXLA)
+```
+
+## ⅲ）検証データによる評価
+
+### 手書き文字画像全量での正解率チェック
+
+```elixir
+model
+|> Axon.Loop.evaluator()
+|> Axon.Loop.metric(:accuracy, "Accuracy")
+|> Axon.Loop.run(Stream.zip(test_datas, test_labels), trained_state, compiler: EXLA)
+```
+
+### 1文字ずつの一致チェック：手書き文字画像
+
+```elixir
+n = 0
+m = 0
+
+Enum.at(test_datas, n)[m]
+|> Nx.reshape({28, 28})
+|> Nx.to_heatmap()
+```
+
+### 1文字ずつの一致チェック：ラベル
+
+```elixir
+# Enum.at(y_test, n)[m]
+```
+
+### 1文字ずつの一致チェック：予測の一致チェック
+
+```elixir
+Axon.predict(model, trained_state, Enum.at(test_datas, n))[m]
+|> Nx.map(&Nx.round(&1))
+```

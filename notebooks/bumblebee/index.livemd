@@ -4,11 +4,13 @@
 
 * https://github.com/elixir-nx/bumblebee
 
+![](https://github.com/elixir-nx/bumblebee/raw/main/.github/images/background.jpg)
+
 ## Index
 
-* [examples](http://localhost:8080/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fexamples.livemd)
+* [examples](/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fexamples.livemd)
 
-* [stable_diffusion](http://localhost:8080/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)
+* [stable_diffusion](/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)
 
 * [stable_diffusion_anime](./stable_diffusion_anime.livemd)
 
@@ -20,4 +22,4 @@
 
 * [stable_diffusion_redshift](./stable_diffusion_redshift.livemd)
 
-* [stable_diffusion](http://localhost:8080/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)
+* [stable_diffusion](/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)

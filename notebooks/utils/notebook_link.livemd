@@ -4,24 +4,10 @@
 Mix.install([{:kino, "~> 0.8.0"}])
 ```
 
-## Create Livebook badges for your notebooks
+## About
 
+* Create a link for a notebook
 * https://livebook.dev/badge
-
-## Generate "Run in Livebook" URL
-
-```elixir
-default = "https://github.com/elixir-nx/bumblebee/blob/main/notebooks/examples.livemd"
-livemd_src_url_input = Kino.Input.textarea("Notebook source URL", default: default)
-```
-
-```elixir
-livemd_src_url = Kino.Input.read(livemd_src_url_input)
-
-run_in_livebook_url = "https://livebook.dev/run?url=" <> URI.encode_www_form(livemd_src_url)
-
-IO.puts(run_in_livebook_url)
-```
 
 ## Generate "Run in Livebook" button
 
@@ -31,28 +17,39 @@ IO.puts(run_in_livebook_url)
 ![Run in Livebook](https://livebook.dev/badge/v1/pink.svg)
 
 ```elixir
+default = "https://github.com/elixir-nx/bumblebee/blob/main/notebooks/examples.livemd"
+livemd_src_url_input = Kino.Input.textarea("Notebook source URL", default: default)
+```
+
+```elixir
 select_options = ~w[blue black gray pink] |> Enum.map(&{&1, String.capitalize(&1)})
 button_color_input = Kino.Input.select("Button color", select_options)
 ```
 
 ```elixir
+livemd_src_url = Kino.Input.read(livemd_src_url_input)
 button_color = Kino.Input.read(button_color_input)
 
-"[![Run in Livebook](https://livebook.dev/badge/v1/#{button_color}.svg)](#{run_in_livebook_url})"
+run_in_livebook_url = &("https://livebook.dev/run?url=" <> URI.encode_www_form(&1))
+run_in_livebook_button = &"[![Run in Livebook](https://livebook.dev/badge/v1/#{&2}.svg)](#{&1})"
+
+livemd_src_url
+|> run_in_livebook_url.()
+|> run_in_livebook_button.(button_color)
+|> dbg()
 |> IO.puts()
 ```
 
 ## Generate "Run notebook" URL
 
 ```elixir
-default = "http://localhost:8080"
-livebook_url_input = Kino.Input.textarea("Livebook URL", default: default)
+livebook_url_input = Kino.Input.textarea("Livebook URL")
 ```
 
 ```elixir
-livebook_url = Kino.Input.read(livebook_url_input)
 livemd_src_url = Kino.Input.read(livemd_src_url_input)
+livebook_url = Kino.Input.read(livebook_url_input)
 
-[livebook_url, "/import?url=", URI.encode_www_form(livemd_src_url)]
+[Path.join([livebook_url, "/import"]), "?", URI.encode_query(url: livemd_src_url)]
 |> IO.puts()
 ```

@@ -1,6 +1,4 @@
-<!-- livebook:{"autosave_interval_s":600} -->
-
-# Stable Diffusion Anime
+# Stable Diffusion - Anime
 
 ```elixir
 Mix.install(
