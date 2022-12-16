@@ -31,9 +31,11 @@ Mix.install([
 
 ![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2Fb43f7923-a21e-674b-b639-adf249835d80.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=7000b9464b86518b6e0051ed38486a78)
 
-![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2F45fd074d-4856-83cc-e13b-744a7fd3c25b.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=6165243802f48c56ce17d106a66a8377)
-
 ## ⅰ）学習データと検証データの準備
+
+60000文字分データをダウンロードし、学習データを検証データに分割
+
+<!-- livebook:{"break_markdown":true} -->
 
 ### MNISTデータセットをダウンロード
 
@@ -163,72 +165,145 @@ end
 
 ## ⅱ）モデルの学習
 
+学習データとラベルの関係性を学習
+
+### 資料
+
+* [Axon](https://hexdocs.pm/axon/Axon.html)
+* [活性化関数（Activation function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2003/26/news012.html)
+* [［活性化関数］ソフトマックス関数（Softmax function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2004/08/news016.html)
+* [Dropout：ディープラーニングの火付け役、単純な方法で過学習を防ぐ](https://deepage.net/deep_learning/2016/10/17/deeplearning_dropout.html)
+* [機械学習入門者向け 分類と回帰の違いをプログラムを書いて学ぼう](https://avinton.com/academy/classification-regression/)
+* [deep learningの基礎（Early Stopping)](https://note.com/shantiboy/n/n32360fe14fd4)
+
 ```elixir
 require Axon
 
+# 入力層
 model =
   Axon.input("input", shape: {nil, 784})
+  # 中間層
+  # * 計算効率の良いReLUを活性化関数
+  # * ランダムでニューラルネットワークの間引きを行うことで過学習回避を実現するドロップアウト
   |> Axon.dense(128, activation: :relu)
   |> Axon.dropout()
+  # 出力層
+  # * 他クラス分類に向いているソフトマックス関数
   |> Axon.dense(10, activation: :softmax)
 
 Axon.Display.as_table(model, Nx.template({1, 784}, :f32))
 |> IO.puts()
+```
 
-alias Axon.Loop.State
+### モデルの学習
+
+* Axon.Loopモジュールにある学習機能を使って、モデルの学習を行う
+* 学習試行回数であるエポック数は、5～10回にして、精度向上したいが、今回はAxonをGPUと比べて実行が遅いCPUモードで動かすことから、3回のみとする
+
+```elixir
+epochs_input = Kino.Input.number("Epochs", default: 3)
+```
+
+```elixir
+epochs = Kino.Input.read(epochs_input)
+
+# 損失関数
+# * 多クラス分類のための「カテゴリカル交差エントロピー」
+loss_function = :categorical_cross_entropy
+# 最適化関数
+# * 収束が速く、使い勝手が良い「Adam」に、パラメータの自由度を制限するWeight decayを追加した「AdamW」
+optimizer = Axon.Optimizers.adamw(0.005)
 
 trained_state =
   model
-  |> Axon.Loop.trainer(:categorical_cross_entropy, Axon.Optimizers.adamw(0.005))
+  |> Axon.Loop.trainer(loss_function, optimizer)
   # 計算過程を表示するための処理
   |> Axon.Loop.metric(:accuracy, "Accuracy")
-  |> Axon.Loop.handle(:iteration_completed, fn state ->
-    %State{epoch: epoch, iteration: iteration, metrics: metrics, step_state: step_state} = state
-    %{loss: loss} = step_state
-    "Loss: #{:io_lib.format('~.5f', [Nx.to_number(loss)])}"
+  # バッチが回るたびに同エポック内の正解率（Accuracy）と学習誤差（loss）を表示更新
+  |> Axon.Loop.handle(:iteration_completed, fn %Axon.Loop.State{} = state ->
+    [
+      "\r",
+      [
+        "Epoch: #{Nx.to_number(state.epoch)}",
+        "Batch: #{Nx.to_number(state.iteration)}"
+      ]
+      |> Enum.concat(
+        for {k, v} <- state.metrics do
+          "#{String.capitalize(k)}: #{:io_lib.format('~.5f', [Nx.to_number(v)])}"
+        end
+      )
+      |> Enum.intersperse(", ")
+    ]
+    |> IO.write()
 
-    metrics =
-      metrics
-      |> Enum.map(fn {k, v} -> "#{k}: #{:io_lib.format('~.5f', [Nx.to_number(v)])}" end)
-      |> Enum.join(" ")
-
-    IO.write("\rEpoch: #{Nx.to_number(epoch)}, Batch: #{Nx.to_number(iteration)}, #{metrics}")
+    # ここで{:halt_loop, state}を返却すると、学習を中断できる
+    # 正解率や誤差の値で早期に学習を打ち切る「Early Stopping」が可能   
     {:continue, state}
   end)
-  |> Axon.Loop.run(Stream.zip(train_datas, train_labels), %{}, epochs: 3, compiler: EXLA)
+  # init_stateに空マップを指定することで、学習モードとなる
+  |> Axon.Loop.run(
+    Stream.zip(train_datas, train_labels),
+    %{},
+    epochs: epochs,
+    compiler: EXLA
+  )
 ```
 
 ## ⅲ）検証データによる評価
+
+予測とラベルの一致率を確認
+
+<!-- livebook:{"break_markdown":true} -->
 
 ### 手書き文字画像全量での正解率チェック
 
 ```elixir
 model
+# 正解率をチェック
 |> Axon.Loop.evaluator()
 |> Axon.Loop.metric(:accuracy, "Accuracy")
-|> Axon.Loop.run(Stream.zip(test_datas, test_labels), trained_state, compiler: EXLA)
+# init_stateに学習済みモデルを指定することで、予測モードとなる
+|> Axon.Loop.run(
+  Stream.zip(test_datas, test_labels),
+  trained_state,
+  compiler: EXLA
+)
 ```
 
-### 1文字ずつの一致チェック：手書き文字画像
+### 1文字ずつの予測の一致チェック
 
 ```elixir
-n = 0
-m = 0
+index_input = Kino.Input.number("Index", default: 0)
+```
 
-Enum.at(test_datas, n)[m]
+```elixir
+index = Kino.Input.read(index_input)
+
+Enum.at(test_datas, index)[index]
 |> Nx.reshape({28, 28})
 |> Nx.to_heatmap()
+|> dbg()
+
+Enum.at(test_labels, index)[index]
+|> inspect()
+|> IO.puts()
+
+:ok
 ```
 
-### 1文字ずつの一致チェック：ラベル
-
 ```elixir
-# Enum.at(y_test, n)[m]
-```
+index = Kino.Input.read(index_input)
 
-### 1文字ずつの一致チェック：予測の一致チェック
+test_data = Enum.at(test_datas, index) |> dbg
 
-```elixir
-Axon.predict(model, trained_state, Enum.at(test_datas, n))[m]
+prediction =
+  model
+  |> Axon.predict(trained_state, test_data)
+  |> dbg
+
+prediction[index]
 |> Nx.map(&Nx.round(&1))
+|> dbg
+
+:ok
 ```

@@ -22,4 +22,4 @@
 
 * [stable_diffusion_redshift](./stable_diffusion_redshift.livemd)
 
-* [stable_diffusion](/import?url=https%3A%2F%2Fgithub.com%2Felixir-nx%2Fbumblebee%2Fblob%2Fmain%2Fnotebooks%2Fstable_diffusion.livemd)
+* [stable_diffusion_1_4](./stable_diffusion_1_4.livemd)
