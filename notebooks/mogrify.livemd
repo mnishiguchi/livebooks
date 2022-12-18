@@ -1,0 +1,93 @@
+# Generate image with mogrify
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"},
+  {:mogrify, "~> 0.9.2"},
+  {:nx, "~> 0.4.0"},
+  {:stb_image, "~> 0.5"}
+])
+```
+
+## Resources
+
+* https://github.com/elixir-mogrify/mogrify
+* https://gitlab.gnome.org/GNOME/pango
+* [Elixirでテスト用の画像を量産しよう](https://qiita.com/t-yamanashi/items/bd65b536ecb9904b3f40) by ymn
+* [「闘魂」Elixir　〜文字を書いた画像からヒートマップを表示しよう〜](https://qiita.com/t-yamanashi/items/81dea68b9ef23c71ea17) by ymn
+
+## ImageMagick
+
+```elixir
+{image_magic_info, 0} = System.shell("magick -version")
+IO.puts(image_magic_info)
+```
+
+```elixir
+{supported_formats, 0} = System.shell("magick -list format")
+IO.puts(supported_formats)
+```
+
+## Current directory
+
+```elixir
+File.cwd!()
+```
+
+## Image directory
+
+```elixir
+img_dir = Path.expand("./tmp/img/")
+```
+
+## Generate an image
+
+```elixir
+img_name = "test.png"
+
+# create a PNG image
+%Mogrify.Image{path: img_name, ext: "png"}
+|> Mogrify.custom("size", "280x280")
+|> Mogrify.custom("seed", 10)
+|> Mogrify.custom("plasma", "fractal")
+|> Mogrify.create(path: img_dir)
+|> dbg()
+
+img_full_path = Path.join([img_dir, img_name]) |> Path.expand()
+IO.puts(img_full_path)
+
+# verify the generated image
+File.read!(img_full_path)
+|> Kino.Image.new("image/png")
+```
+
+## Heatmap an image
+
+* pango is not working on macos for some reason...
+
+```elixir
+img_dir = "./tmp/img/"
+img_name = "toukon.png"
+
+import Mogrify
+
+# create a PNG image
+%Mogrify.Image{path: img_name, ext: "png"}
+|> Mogrify.custom("size", "40x20")
+|> Mogrify.custom("background", "#000000")
+|> Mogrify.custom("fill", "#FFFFFF")
+|> Mogrify.custom("pango", "闘魂")
+|> Mogrify.create(path: img_dir)
+|> dbg()
+
+img_full_path = Path.join([img_dir, img_name]) |> Path.expand()
+IO.puts(img_full_path)
+
+nx_image =
+  File.read!(img_full_path)
+  |> StbImage.read_binary!()
+  |> StbImage.to_nx()
+
+nx_image[channels: 0]
+|> Nx.to_heatmap()
+```
