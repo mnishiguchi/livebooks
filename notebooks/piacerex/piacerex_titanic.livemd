@@ -1,0 +1,401 @@
+# タイタニック問題
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.4"},
+  {:axon, "~> 0.3"},
+  {:exla, "~> 0.4"},
+  {:csv, "~> 3.0"}
+])
+
+File.cd!("../notebooks/piacerex/titanic")
+File.cwd!()
+```
+
+## 概要
+
+* Kaggleのデータで「データ前処理」の基礎を学ぶ
+* [タイタニック問題](https://www.kaggle.com/competitions/titanic)
+
+![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2F463b8f01-a26f-f7dd-4dfd-89aa806ae502.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=babf408bee864bf2f86e533876234215)
+
+## 資料
+
+* [Eixirで機械学習に初挑戦④：ElixirでKaggleに挑戦…「データ前処理」基礎編](https://qiita.com/piacerex/items/a40c5d24190d59f68610) by piacerex
+* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+
+## ⅰ）学習データの準備
+
+### ⅰ-1．生データの収集
+
+* Download [titanic data](https://www.kaggle.com/competitions/titanic/data)
+
+<!-- livebook:{"break_markdown":true} -->
+
+### ⅰ-2．生データをLivebookにロード
+
+```elixir
+# Load train data from a CSV file
+load_raw_train_data = fn file_path ->
+  File.stream!(file_path)
+  |> CSV.decode!()
+  |> Enum.to_list()
+end
+
+train_csv_rows = load_raw_train_data.("train.csv")
+```
+
+### ⅰ-3．データ操作しやすくするためにマップ群に変換
+
+```elixir
+raw_train_data_to_maps = fn [header_row | data_rows] ->
+  # A list of lowercase atoms
+  train_data_keys =
+    for col <- header_row do
+      col
+      |> String.downcase()
+      |> String.to_atom()
+    end
+
+  # A list of maps
+  for data_row <- data_rows do
+    train_data_keys
+    |> Enum.zip(data_row)
+    |> Enum.into(%{})
+  end
+end
+
+train_csv_maps = raw_train_data_to_maps.(train_csv_rows)
+```
+
+### ⅰ-4．学習のための最低限の「データ前処理」
+
+<!-- livebook:{"break_markdown":true} -->
+
+* Ensure that data entries contain number numbers
+* Ensure that data entries are relevant to labels
+
+<!-- livebook:{"break_markdown":true} -->
+
+#### ①空白値の確認
+
+```elixir
+count_missing_values = fn datas ->
+  datas
+  |> Enum.flat_map(fn entry ->
+    entry
+    |> Map.filter(fn {_k, v} -> v == "" end)
+    |> Map.keys()
+  end)
+  |> Enum.frequencies()
+end
+
+count_missing_values.(train_csv_maps)
+```
+
+#### ②ID／ラベル／学習データを分離
+
+```elixir
+separate_ids_and_labels = fn datas, id_key, label_key ->
+  ids = Enum.map(datas, &Map.fetch!(&1, id_key))
+
+  # * Nx.tensorでの行列化できる値は小数だが、ラベルは整数文字列なので、
+  #   整数の後ろに「.0」を付加し、String.to_floatすることで小数化
+  # * モデルに入力できるよう、「2次元行列のリスト」に変換する必要があるが、
+  #   ラベル群は単なるリストのため、2次元行列で包むために、2重リスト[[～]]で囲んだ上で、
+  #   Nx.tensorに渡す
+  # * 未知データにはラベルが無いので、ラベルが無い場合はnilを返す
+  labels =
+    if Map.has_key?(List.first(datas), label_key) do
+      Enum.map(
+        datas,
+        fn entry ->
+          Nx.tensor([
+            [String.to_float("#{Map.fetch!(entry, label_key)}.0")]
+          ])
+        end
+      )
+    else
+      nil
+    end
+
+  maps = Enum.map(datas, &Map.drop(&1, [id_key, label_key]))
+
+  {ids, labels, maps}
+end
+
+{
+  train_csv_ids,
+  train_csv_labels,
+  train_csv_maps
+} = separate_ids_and_labels.(train_csv_maps, :passengerid, :survived)
+```
+
+#### ③特徴とならない列の削除
+
+タイタニック問題で「特徴と言えないデータ」に該当すると思われるのは以下です
+
+* cabin (部屋番号)
+  * 部屋番号は、生存率にとても高い相関性を持っているはずですが、Cabinは891件中、687件と大量のデータが欠損しているため、使い物にならないと判断し、削除
+* name(乗客名)
+  * 乗客名は、全員が異なり、生存率にも無関係と思われる
+  * 名字が同じで、チケット番号が近い or 部屋が近い等であれば、家族乗船の可能性があり、家族全員がボートに乗れるまで待ったとき生存率が低くなる、といった仮説は考えられるが、いったん削除
+* ticket(チケット番号)
+  * チケット番号そのものは、生存率に無関係と思われる
+  * 近い番号の方が、生存率の高い／低い部屋番号にまとまって配置されたという可能性は考えられるが、憶測の域を出ないので、いったん削除
+
+```elixir
+drop_columns = fn datas, keys ->
+  for data <- datas do
+    Map.drop(data, keys)
+  end
+end
+
+train_csv_maps_dropped =
+  train_csv_maps
+  |> drop_columns.([:cabin, :name, :ticket])
+```
+
+#### ④欠損値の補完
+
+* 欠損値のうち、`cabin`は列ごと削除されたので、残る`age`と`emberked`が補完対象
+* ここではいったん、ageは「0」、emberkedは「S」で補完
+
+```elixir
+complete_missing_values = fn datas, mapping ->
+  for {key, replacement_value} <- mapping, reduce: datas do
+    acc ->
+      Enum.map(
+        acc,
+        &Map.replace!(
+          &1,
+          key,
+          String.replace(Map.fetch!(&1, key), ~r/^$/, replacement_value)
+        )
+      )
+  end
+end
+
+train_csv_maps_replaced =
+  train_csv_maps_dropped
+  |> complete_missing_values.(embarked: "S", age: "0")
+```
+
+#### ⑤カテゴリ値（種別文字列）を数値に変換
+
+* 種別を表す文字列の数値化
+* 「ダミー変数」と呼ばれることもある
+* こうした置換自体を「ワンホットエンコーディング」と呼ぶこともある
+
+```elixir
+make_dummy_mapping = fn datas, key ->
+  datas
+  |> Enum.map(&Map.fetch!(&1, key))
+  |> Enum.uniq()
+  |> Enum.with_index(&{&1, String.to_float("#{&2}.0")})
+  |> Enum.into(%{})
+end
+```
+
+```elixir
+make_dummy_mapping.(train_csv_maps_replaced, :embarked)
+```
+
+```elixir
+make_dummy_mapping.(train_csv_maps_replaced, :sex)
+```
+
+ポイント：検証データや未知データではカテゴリ値が網羅されていないケースへの対策として、学習データからカテゴリ値を拾えるようにするため、あらかじめカテゴリ値生成用のデータを別に受け取れるようにしておく。
+
+```elixir
+replace_with_dummies = fn datas, dummy_source, keys ->
+  for key <- keys, reduce: datas do
+    acc ->
+      Enum.map(acc, fn entry ->
+        dummy_mapping = make_dummy_mapping.(dummy_source, key)
+        current_value = Map.fetch!(entry, key)
+        %{entry | key => Map.fetch!(dummy_mapping, current_value)}
+      end)
+  end
+end
+
+train_csv_maps_dummied =
+  train_csv_maps_replaced
+  |> replace_with_dummies.(train_csv_maps_replaced, [:embarked, :sex])
+```
+
+#### ⑥整数を小数に変換
+
+<!-- livebook:{"break_markdown":true} -->
+
+* 数値文字列から数値への変換
+* 整数と小数が混在する列は、文字列から数値への変換を`String.to_integer`と`String.to_float`を使い分けしなければならなくて面倒なため、整数文字列を全て小数文字列に変換した上で、小数に変換
+
+```elixir
+replace_numeric_string_with_float = fn datas, keys ->
+  for key <- keys, reduce: datas do
+    acc ->
+      Enum.map(
+        acc,
+        &Map.replace!(
+          &1,
+          key,
+          Map.fetch!(&1, key)
+          |> String.replace(~r/^(?!.*\.).*$/, "\\0\.0")
+          |> String.to_float()
+        )
+      )
+  end
+end
+
+train_csv_maps_numericized =
+  train_csv_maps_dummied
+  |> replace_numeric_string_with_float.([:age, :fare, :parch, :pclass, :sibsp])
+```
+
+#### ⑦数値を行列に変換
+
+* 数値をモデルに入力できるよう、「2次元行列のリスト」に変換
+
+```elixir
+maps_to_tensors = fn datas ->
+  for data <- datas do
+    # This might need sorting but seems working as is
+    Nx.tensor([Map.values(data)])
+  end
+end
+
+train_csv_datas =
+  train_csv_maps_numericized
+  |> maps_to_tensors.()
+```
+
+#### ⑧「データ前処理」全体の関数化
+
+* ここまでの「データ前処理」をprocessという関数で1発で完了するようにします
+
+```elixir
+missing_value_mapping = [embarked: "S", age: "0", fare: "0"]
+```
+
+```elixir
+ignored_keys = [:cabin, :name, :ticket]
+```
+
+```elixir
+load_datas_from_csv_file = fn file_path ->
+  load_raw_train_data.(file_path)
+  |> raw_train_data_to_maps.()
+  |> separate_ids_and_labels.(:passengerid, :survived)
+end
+
+process_datas = fn datas, dummy_source ->
+  datas
+  |> drop_columns.(ignored_keys)
+  |> complete_missing_values.(missing_value_mapping)
+  |> replace_with_dummies.(
+    dummy_source |> complete_missing_values.(missing_value_mapping),
+    [:embarked, :sex]
+  )
+  |> replace_numeric_string_with_float.([:age, :fare, :parch, :pclass, :sibsp])
+  |> maps_to_tensors.()
+end
+
+{train_csv_ids, train_csv_labels, train_csv_maps} = load_datas_from_csv_file.("train.csv")
+
+train_datas =
+  process_datas.(train_csv_maps, train_csv_maps)
+  |> Enum.zip(train_csv_labels)
+```
+
+## ⅱ）モデルの学習
+
+```elixir
+model =
+  Axon.input("input", shape: {nil, 7})
+  |> Axon.dense(48, activation: :tanh)
+  |> Axon.dropout(rate: 0.2)
+  |> Axon.dense(48, activation: :tanh)
+  |> Axon.dense(1, activation: :sigmoid)
+
+trained_state =
+  model
+  |> Axon.Loop.trainer(:mean_squared_error, Axon.Optimizers.adam(0.0005))
+  |> Axon.Loop.metric(:accuracy, "Accuracy")
+  |> Axon.Loop.run(train_datas, %{}, epochs: 20, compiler: EXLA)
+```
+
+## ⅲ）検証データによる評価
+
+## ⅳ）未知データによる予測
+
+#### ①未知データのロードと学習データの列差異の確認
+
+* 未知データにはラベルが無い
+
+```elixir
+[train_csv_header | _] = load_raw_train_data.("train.csv")
+[test_csv_header | _] = load_raw_train_data.("test.csv")
+
+train_csv_header -- test_csv_header
+```
+
+```elixir
+{test_csv_ids, _, test_csv_maps} = load_datas_from_csv_file.("test.csv")
+```
+
+#### ②空白値の確認
+
+* 未知データに学習データと異なる欠損値が無いかチェック
+
+```elixir
+test_csv_maps
+|> count_missing_values.()
+```
+
+```elixir
+test_csv_maps
+|> drop_columns.(ignored_keys)
+|> complete_missing_values.(missing_value_mapping)
+|> count_missing_values.()
+```
+
+#### ③未知データに対する予測の実施
+
+```elixir
+{test_csv_ids, _, test_csv_maps} = load_datas_from_csv_file.("test.csv")
+
+# 第二引数に、学習データを渡すことがポイント
+# これは検証データや未知データではカテゴリ値が網羅されていないケースへの対策
+processed_datas = process_datas.(test_csv_maps, train_csv_maps)
+
+result =
+  processed_datas
+  |> Enum.map(fn data ->
+    Axon.predict(model, trained_state, data)
+    |> Nx.to_flat_list()
+    |> List.first()
+    |> round()
+  end)
+  |> then(fn predicted_labels ->
+    Enum.zip(test_csv_ids, predicted_labels)
+  end)
+  |> Enum.map(fn {id, predicted_label} ->
+    [id, "#{predicted_label}"]
+  end)
+  |> then(fn entries ->
+    [["PassengerId", "Survived"]] ++ entries
+  end)
+```
+
+## Kaggleへの提出CSV作成
+
+```elixir
+csv_data =
+  result
+  |> CSV.encode()
+  |> Enum.to_list()
+
+# file_name = "prediction_#{:os.system_time(:second)}.csv"
+# File.write(file_name, csv_data)
+```
