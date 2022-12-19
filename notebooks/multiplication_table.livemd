@@ -1,0 +1,56 @@
+# multiplication table
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.4"},
+  {:kino, "~> 0.7"}
+])
+```
+
+## About
+
+* 九九を Enum でループするバージョンと Nx で行列演算するバージョンを2種類実装
+
+## 資料
+
+* [Livebook で九九の表を作る（Enum版、Nx版）](https://qiita.com/RyoWakabayashi/items/76cf8cae6bd53cb78f95) by RyoWakabayashi
+
+## Enum
+
+```elixir
+for x <- 1..9 do
+  for y <- 1..9 do
+    x * y
+  end
+end
+```
+
+## Nx
+
+```elixir
+qq =
+  {1, 9}
+  |> Nx.iota()
+  |> Nx.add(1)
+  |> then(&Nx.dot(Nx.transpose(&1), &1))
+  |> Nx.to_flat_list()
+  |> Enum.chunk_every(9)
+  |> dbg()
+
+:ok
+```
+
+## キレイに表示する
+
+```elixir
+[first_row | _] = qq
+
+for [first | _rest] = row <- qq, into: %{} do
+  {first, row}
+end
+|> Map.put(0, first_row)
+|> Kino.DataTable.new()
+|> dbg()
+
+:ok
+```
