@@ -1,4 +1,4 @@
-# Elixirでディープラーニング①：手書き文字識別（MNIST）by piacerex
+# 手書き文字識別（MNIST）
 
 ```elixir
 Mix.install([
@@ -237,7 +237,7 @@ trained_state =
     |> IO.write()
 
     # ここで{:halt_loop, state}を返却すると、学習を中断できる
-    # 正解率や誤差の値で早期に学習を打ち切る「Early Stopping」が可能   
+    # 正解率や誤差の値で早期に学習を打ち切る「Early Stopping」が可能
     {:continue, state}
   end)
   # init_stateに空マップを指定することで、学習モードとなる

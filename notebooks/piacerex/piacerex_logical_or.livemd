@@ -1,4 +1,4 @@
-# Elixirで機械学習に初挑戦 by piacerex
+# 教師あり学習（ORの予測）
 
 ```elixir
 Mix.install([

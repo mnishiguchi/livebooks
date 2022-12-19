@@ -1,6 +1,6 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# 闘魂Elixir ── Advent of Code 2022 (Day 1: Calorie Counting)をElixirで楽しむ
+# 闘魂Elixir ── Calorie Counting
 
 ```elixir
 Mix.install([{:benchee, "~> 1.1"}])
@@ -16,7 +16,7 @@ Mix.install([{:benchee, "~> 1.1"}])
 
 * [闘魂Elixir ── Advent of Code 2022 (Day 1: Calorie Counting)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/fd24ce36eae1358658ad) by torifukukaiou
 
-## 解答例
+## Answers
 
 ```elixir
 input = """
@@ -274,7 +274,7 @@ mnishiguchi_recursive      131.20 K        7.62 μs    ±62.93%        7.50 μs 
 torifukukaiou               24.54 K       40.75 μs    ±56.09%       38.92 μs       92.17 μs
 mnishiguchi_regex            3.98 K      251.20 μs    ±56.14%      244.73 μs      552.60 μs
 
-Comparison: 
+Comparison:
 mnishiguchi_recursive      131.20 K
 torifukukaiou               24.54 K - 5.35x slower +33.13 μs
 mnishiguchi_regex            3.98 K - 32.96x slower +243.58 μs
@@ -285,7 +285,7 @@ mnishiguchi_recursive       1820.66        0.55 ms    ±57.79%        0.54 ms   
 mnishiguchi_regex             52.88       18.91 ms    ±59.66%       18.34 ms       40.60 ms
 torifukukaiou                 34.02       29.40 ms    ±88.48%       22.59 ms       90.64 ms
 
-Comparison: 
+Comparison:
 mnishiguchi_recursive       1820.66
 mnishiguchi_regex             52.88 - 34.43x slower +18.36 ms
 torifukukaiou                 34.02 - 53.52x slower +28.85 ms
@@ -296,7 +296,7 @@ mnishiguchi_recursive         13.76       0.0727 s    ±46.23%       0.0813 s   
 mnishiguchi_regex              0.52         1.92 s    ±80.69%         1.86 s         3.81 s
 torifukukaiou                0.0271        36.95 s     ±0.00%        36.95 s        36.95 s
 
-Comparison: 
+Comparison:
 mnishiguchi_recursive         13.76
 mnishiguchi_regex              0.52 - 26.34x slower +1.84 s
 torifukukaiou                0.0271 - 508.24x slower +36.87 s
@@ -307,7 +307,7 @@ mnishiguchi_recursive      415.45 K        2.41 μs   ±295.09%        2.33 μs 
 torifukukaiou               57.54 K       17.38 μs    ±25.09%       16.38 μs       37.29 μs
 mnishiguchi_regex           10.30 K       97.13 μs    ±10.55%       97.29 μs      125.37 μs
 
-Comparison: 
+Comparison:
 mnishiguchi_recursive      415.45 K
 torifukukaiou               57.54 K - 7.22x slower +14.97 μs
 mnishiguchi_regex           10.30 K - 40.35x slower +94.72 μs

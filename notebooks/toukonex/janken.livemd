@@ -1,0 +1,59 @@
+# 闘魂Elixir ── Rock Paper Scissors
+
+```elixir
+# Mix.install([{:benchee, "~> 1.1"}])
+```
+
+## About
+
+* [闘魂Elixir ── Advent of Code 2022 (Day 2: Rock Paper Scissors)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/a82d74a3707162525d73) by torifukukaiou
+
+## Answers
+
+```elixir
+input = """
+A Y
+B X
+C Z
+"""
+```
+
+```elixir
+hands = %{
+  ?A => :rock,
+  ?B => :paper,
+  ?C => :scissors,
+  ?X => :rock,
+  ?Y => :paper,
+  ?Z => :scissors
+}
+
+scores = %{
+  win: 6,
+  draw: 3,
+  lose: 0,
+  rock: 1,
+  paper: 2,
+  scissors: 3
+}
+
+judge = %{
+  # {opponent, me} => win + hand
+  {:rock, :scissors} => scores.win + scores.scissors,
+  {:rock, :rock} => scores.draw + scores.rock,
+  {:rock, :paper} => scores.lose + scores.paper,
+  {:paper, :rock} => scores.win + scores.rock,
+  {:paper, :paper} => scores.draw + scores.paper,
+  {:paper, :scissors} => scores.lose + scores.scissors,
+  {:scissors, :paper} => scores.win + scores.paper,
+  {:scissors, :scissors} => scores.draw + scores.scissors,
+  {:scissors, :rock} => scores.lose + scores.rock
+}
+
+for <<player1, " ", player2, "\n" <- input>>, reduce: 0 do
+  acc ->
+    {player1, player2}
+    {hands[player1], hands[player2]}
+    acc + judge[{hands[player1], hands[player2]}]
+end
+```

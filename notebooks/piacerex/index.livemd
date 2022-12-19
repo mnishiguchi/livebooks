@@ -8,5 +8,8 @@
 
 ## Index
 
-* [Elixirで機械学習に初挑戦](./piacerex_logical_or.livemd)
-* [Elixirでディープラーニング①：手書き文字識別（MNIST）](./piacerex_mnist.livemd)
+### 機械学習に初挑戦
+
+* [教師あり学習（ORの予測）](./piacerex_logical_or.livemd)
+* [手書き文字識別（MNIST）](./piacerex_mnist.livemd)
+* [Kaggleに挑戦…「データ前処理」基礎編](./piacerex_kaggle_basics.livemd)
