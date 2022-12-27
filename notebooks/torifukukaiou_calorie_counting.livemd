@@ -1,0 +1,320 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 闘魂Elixir ── Advent of Code 2022 (Day 1: Calorie Counting)をElixirで楽しむ
+
+```elixir
+Mix.install([{:benchee, "~> 1.1"}])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## About
+
+* [闘魂Elixir ── Advent of Code 2022 (Day 1: Calorie Counting)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/fd24ce36eae1358658ad) by torifukukaiou
+
+## 解答例
+
+```elixir
+input = """
+1000
+2000
+3000
+
+4000
+
+5000
+6000
+
+7000
+8000
+9000
+
+10000
+"""
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"1000\n2000\n3000\n\n4000\n\n5000\n6000\n\n7000\n8000\n9000\n\n10000\n"
+```
+
+```elixir
+torifukukaiou = fn input ->
+  f = fn
+    "" -> ""
+    s -> String.to_integer(s)
+  end
+
+  sum = fn
+    [""] -> 0
+    list -> Enum.sum(list)
+  end
+
+  input
+  |> String.split("\n")
+  |> Enum.map(f)
+  |> Enum.chunk_by(&(&1 == ""))
+  |> Enum.map(sum)
+  |> Enum.max()
+end
+
+torifukukaiou.(input)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+24000
+```
+
+```elixir
+mnishiguchi = fn input ->
+  input
+  |> String.split("\n\n", trim: true)
+  |> Enum.map(fn numbers_str ->
+    numbers_str
+    |> String.split(~r/\d+/, include_captures: true, trim: true)
+    |> Enum.filter(&(&1 =~ ~r/\d+/))
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.sum()
+  end)
+  |> Enum.max()
+end
+
+mnishiguchi.(input)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+24000
+```
+
+```elixir
+defmodule MNishiguchi.Answer2 do
+  def parse(binary, digits \\ [], chunk \\ [], max \\ 0)
+
+  def parse(<<"0"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [0 | digits], chunk, max)
+
+  def parse(<<"1"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [1 | digits], chunk, max)
+
+  def parse(<<"2"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [2 | digits], chunk, max)
+
+  def parse(<<"3"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [3 | digits], chunk, max)
+
+  def parse(<<"4"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [4 | digits], chunk, max)
+
+  def parse(<<"5"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [5 | digits], chunk, max)
+
+  def parse(<<"6"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [6 | digits], chunk, max)
+
+  def parse(<<"7"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [7 | digits], chunk, max)
+
+  def parse(<<"8"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [8 | digits], chunk, max)
+
+  def parse(<<"9"::utf8, rest::binary>>, digits, chunk, max),
+    do: parse(<<rest::binary>>, [9 | digits], chunk, max)
+
+  # end of chunk
+  # * clear digits
+  # * clear chunk
+  # * update max
+  def parse(<<"\n\n"::utf8, rest::binary>>, digits, chunk, max) do
+    parsed_number = digits |> Enum.reverse() |> List.flatten() |> Integer.undigits()
+    chunk_sum = [parsed_number | chunk] |> List.flatten() |> Enum.sum()
+    parse(<<rest::binary>>, [], [], Enum.max([max, chunk_sum]))
+  end
+
+  # end of number
+  # * clear digits
+  # * update chunk
+  def parse(<<"\n"::utf8, rest::binary>>, digits, chunk, max) do
+    parsed_number = digits |> Enum.reverse() |> List.flatten() |> Integer.undigits()
+    parse(<<rest::binary>>, [], [parsed_number | chunk], max)
+  end
+
+  # base case
+  def parse("", _digits, _chunk, max), do: max
+end
+
+MNishiguchi.Answer2.parse(input)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+24000
+```
+
+## Bench
+
+* Adopted zacky-sensei's code in [闘魂Elixir ── Advent of Code 2022 (Day 1: Calorie Counting)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/fd24ce36eae1358658ad)
+
+```elixir
+defmodule AdventCode1.Banch do
+  def gen_line() do
+    "#{:rand.uniform(10000)}"
+  end
+
+  def gen_lines(n) do
+    Stream.unfold(:rand.uniform(n), fn
+      0 -> nil
+      n -> {gen_line(), n - 1}
+    end)
+    |> Enum.join("\n")
+  end
+
+  def gen_input(n) do
+    Stream.unfold(:rand.uniform(n), fn
+      0 -> nil
+      m -> {gen_lines(n), m - 1}
+    end)
+    |> Enum.join("\n\n")
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, AdventCode1.Banch, <<70, 79, 82, 49, 0, 0, 10, ...>>, {:gen_input, 1}}
+```
+
+```elixir
+Benchee.run(
+  %{
+    "torifukukaiou" => fn input -> torifukukaiou.(input) end,
+    "mnishiguchi_regex" => fn input -> mnishiguchi.(input) end,
+    "mnishiguchi_recursive" => fn input -> MNishiguchi.Answer2.parse(input) end
+  },
+  inputs: %{
+    "sample1" => :sample1,
+    "10" => 10,
+    "100" => 100,
+    "1000" => 1000
+  },
+  before_each: fn input ->
+    case input do
+      :sample1 ->
+        """
+        1000
+        2000
+        3000
+
+        4000
+
+        5000
+        6000
+
+        7000
+        8000
+        9000
+
+        10000
+        """
+
+      n ->
+        AdventCode1.Banch.gen_input(n)
+    end
+  end
+)
+
+:ok
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Operating System: macOS
+CPU Information: Apple M1 Pro
+Number of Available Cores: 10
+Available memory: 32 GB
+Elixir 1.14.2
+Erlang 25.2
+
+Benchmark suite executing with the following configuration:
+warmup: 2 s
+time: 5 s
+memory time: 0 ns
+reduction time: 0 ns
+parallel: 1
+inputs: 10, 100, 1000, sample1
+Estimated total run time: 1.40 min
+
+Benchmarking mnishiguchi_recursive with input 10 ...
+Benchmarking mnishiguchi_recursive with input 100 ...
+Benchmarking mnishiguchi_recursive with input 1000 ...
+Benchmarking mnishiguchi_recursive with input sample1 ...
+Benchmarking mnishiguchi_regex with input 10 ...
+Benchmarking mnishiguchi_regex with input 100 ...
+Benchmarking mnishiguchi_regex with input 1000 ...
+Benchmarking mnishiguchi_regex with input sample1 ...
+Benchmarking torifukukaiou with input 10 ...
+Benchmarking torifukukaiou with input 100 ...
+Benchmarking torifukukaiou with input 1000 ...
+Benchmarking torifukukaiou with input sample1 ...
+
+##### With input 10 #####
+Name                            ips        average  deviation         median         99th %
+mnishiguchi_recursive      131.20 K        7.62 μs    ±62.93%        7.50 μs       17.46 μs
+torifukukaiou               24.54 K       40.75 μs    ±56.09%       38.92 μs       92.17 μs
+mnishiguchi_regex            3.98 K      251.20 μs    ±56.14%      244.73 μs      552.60 μs
+
+Comparison: 
+mnishiguchi_recursive      131.20 K
+torifukukaiou               24.54 K - 5.35x slower +33.13 μs
+mnishiguchi_regex            3.98 K - 32.96x slower +243.58 μs
+
+##### With input 100 #####
+Name                            ips        average  deviation         median         99th %
+mnishiguchi_recursive       1820.66        0.55 ms    ±57.79%        0.54 ms        1.15 ms
+mnishiguchi_regex             52.88       18.91 ms    ±59.66%       18.34 ms       40.60 ms
+torifukukaiou                 34.02       29.40 ms    ±88.48%       22.59 ms       90.64 ms
+
+Comparison: 
+mnishiguchi_recursive       1820.66
+mnishiguchi_regex             52.88 - 34.43x slower +18.36 ms
+torifukukaiou                 34.02 - 53.52x slower +28.85 ms
+
+##### With input 1000 #####
+Name                            ips        average  deviation         median         99th %
+mnishiguchi_recursive         13.76       0.0727 s    ±46.23%       0.0813 s        0.127 s
+mnishiguchi_regex              0.52         1.92 s    ±80.69%         1.86 s         3.81 s
+torifukukaiou                0.0271        36.95 s     ±0.00%        36.95 s        36.95 s
+
+Comparison: 
+mnishiguchi_recursive         13.76
+mnishiguchi_regex              0.52 - 26.34x slower +1.84 s
+torifukukaiou                0.0271 - 508.24x slower +36.87 s
+
+##### With input sample1 #####
+Name                            ips        average  deviation         median         99th %
+mnishiguchi_recursive      415.45 K        2.41 μs   ±295.09%        2.33 μs        3.25 μs
+torifukukaiou               57.54 K       17.38 μs    ±25.09%       16.38 μs       37.29 μs
+mnishiguchi_regex           10.30 K       97.13 μs    ±10.55%       97.29 μs      125.37 μs
+
+Comparison: 
+mnishiguchi_recursive      415.45 K
+torifukukaiou               57.54 K - 7.22x slower +14.97 μs
+mnishiguchi_regex           10.30 K - 40.35x slower +94.72 μs
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
