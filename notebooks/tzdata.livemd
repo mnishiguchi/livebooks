@@ -1,0 +1,45 @@
+# Time zone using tzdata
+
+```elixir
+Mix.install([
+  {:tzdata, "~> 1.1"}
+])
+
+# By default TZ database is Calendar.UTCOnlyTimeZoneDatabase
+Calendar.UTCOnlyTimeZoneDatabase = Application.get_env(:elixir, :time_zone_database)
+
+# Replace it with Tzdata.TimeZoneDatabase
+Application.put_env(:elixir, :time_zone_database, Tzdata.TimeZoneDatabase)
+```
+
+## Resources
+
+* https://hexdocs.pm/tzdata/readme.html
+* https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+## Time now in different time zones
+
+```elixir
+DateTime.utc_now()
+```
+
+```elixir
+DateTime.now!("Asia/Tokyo")
+```
+
+```elixir
+DateTime.now!("America/New_York")
+```
+
+```elixir
+# explicitly with TZ database
+DateTime.now("Europe/Copenhagen", Tzdata.TimeZoneDatabase)
+```
+
+```elixir
+now = DateTime.now!("Asia/Tokyo")
+oshogatsu = DateTime.new!(~D[2023-01-01], ~T[01:01:00], "Asia/Tokyo")
+awesome = oshogatsu
+
+DateTime.diff(awesome, now, :hour)
+```
