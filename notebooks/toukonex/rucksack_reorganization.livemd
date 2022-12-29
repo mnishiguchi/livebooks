@@ -1,0 +1,40 @@
+# 闘魂 Elixir ── Rucksack Reorganization
+
+```elixir
+# Mix.install([{:benchee, "~> 1.1"}])
+```
+
+## About
+
+* [闘魂 Elixir ── Advent of Code 2022 (Day 3: Rucksack Reorganization)を Elixir で楽しむ](https://qiita.com/torifukukaiou/items/c66ab1cf7eb0330f6a59)
+
+## Answers
+
+```elixir
+input = """
+vJrwpWtwJgWrhcsFMMfFFhFp
+jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+PmmdzqPrVvPwwTWBwg
+wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+ttgJtRGJQctTZtZT
+CrZsJsPPZsGzwwsLwLmpwMDw
+"""
+```
+
+```elixir
+score = fn
+  x when x in ?a..?z -> x - 96
+  x when x in ?A..?Z -> x - 38
+end
+
+for row <- String.split(input, "\n", trim: true), reduce: 0 do
+  sum ->
+    {a, b} = String.split_at(row, div(String.length(row), 2))
+
+    [intersection] =
+      MapSet.intersection(MapSet.new(to_charlist(a)), MapSet.new(to_charlist(b)))
+      |> MapSet.to_list()
+
+    sum + score.(intersection)
+end
+```
