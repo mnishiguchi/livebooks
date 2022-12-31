@@ -41,18 +41,10 @@ parse_stacks = fn stacks_input ->
       row -> Enum.join(row) |> String.trim() |> String.to_integer()
     end)
   end)
-  |> Enum.zip()
-  |> Enum.map(fn stack_tpl ->
-    last_index = tuple_size(stack_tpl) - 1
-
-    {
-      elem(stack_tpl, last_index),
-      Tuple.delete_at(stack_tpl, last_index)
-      |> Tuple.to_list()
-      |> Enum.reject(&is_nil/1)
-    }
+  |> Enum.zip_reduce(%{}, fn zipped, acc ->
+    {stack, [index]} = Enum.split(zipped, -1)
+    Map.put(acc, index, Enum.reject(stack, &is_nil/1))
   end)
-  |> Map.new()
 end
 
 stacks = parse_stacks.(stacks_input)
