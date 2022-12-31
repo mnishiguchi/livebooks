@@ -8,9 +8,10 @@
 
 * [闘魂Elixir ── Advent of Code 2022 (Day 4: Camp Cleanup)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/4648c2e49ac7552d9e3c)
 
-## Answers
+## Answer 1 - support only one-digit numbers
 
 ```elixir
+# expected answer: 2
 input = """
 2-4,6-8
 2-3,4-5
@@ -59,4 +60,62 @@ for <<(<<a1::utf8, "-"::utf8, a2::utf8, ","::utf8, b1::utf8, "-"::utf8, b2::utf8
     reduce: 0 do
   count -> if judge.(a1 - ?0, a2 - ?0, b1 - ?0, b2 - ?0), do: count + 1, else: count
 end
+```
+
+## Answer 2 - support two-digit numbers
+
+```elixir
+# expected answer: 3
+input = """
+2-4,6-8
+2-3,4-5
+5-7,7-9
+2-8,3-7
+6-6,4-6
+2-6,4-8
+10-50,0-99
+"""
+```
+
+```elixir
+parse_row = fn row ->
+  row |> String.split(["-", ","]) |> Enum.map(&String.to_integer/1)
+end
+
+[10, 50, 0, 99] = parse_row.("10-50,0-99")
+```
+
+```elixir
+judge = fn
+  [a1, a2, b1, b2] when a1 in b1..b2 and a2 in b1..b2 -> true
+  [a1, a2, b1, b2] when b1 in a1..a2 and b2 in a1..a2 -> true
+  [_, _, _, _] -> false
+end
+
+false = judge.([2, 4, 6, 8])
+true = judge.([10, 50, 0, 99])
+
+:ok
+```
+
+```elixir
+parse_row = fn row ->
+  row |> String.split(["-", ","]) |> Enum.map(&String.to_integer/1)
+end
+
+judge = fn
+  [a1, a2, b1, b2] when a1 in b1..b2 and a2 in b1..b2 -> true
+  [a1, a2, b1, b2] when b1 in a1..a2 and b2 in a1..a2 -> true
+  [_, _, _, _] -> false
+end
+
+input
+|> String.split("\n", trim: true)
+|> Enum.reduce(0, fn row, acc ->
+  if row |> parse_row.() |> judge.() do
+    acc + 1
+  else
+    acc
+  end
+end)
 ```
