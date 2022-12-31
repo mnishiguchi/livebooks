@@ -1,0 +1,84 @@
+# 闘魂 Elixir ── Supply Stacks
+
+```elixir
+# Mix.install([{:benchee, "~> 1.1"}])
+```
+
+## About
+
+* [闘魂Elixir ── Advent of Code 2022 (Day 5: Supply Stacks)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/a2888ac943fcfb1774a3)
+* https://adventofcode.com/2022/day/5
+
+## Answer 1
+
+```elixir
+drawing = """
+    [D]    
+[N] [C]    
+[Z] [M] [P]
+ 1   2   3 
+
+move 1 from 2 to 1
+move 3 from 1 to 3
+move 2 from 2 to 1
+move 1 from 1 to 2
+"""
+
+stacks = %{
+  1 => ["N", "Z"],
+  2 => ["D", "C", "M"],
+  3 => ["P"]
+}
+
+commands = [
+  {1, 2, 1},
+  {3, 1, 3},
+  {2, 2, 1},
+  {1, 1, 2}
+]
+
+:ok
+```
+
+```elixir
+update_stacks = fn stacks, {n, from, to} ->
+  {taken, rest} = Enum.split(stacks[from], n)
+
+  stacks
+  |> Map.replace(from, rest)
+  |> Map.replace(to, Enum.reverse(taken) ++ stacks[to])
+end
+
+stacks
+|> update_stacks.({1, 2, 1})
+|> update_stacks.({3, 1, 3})
+|> update_stacks.({2, 2, 1})
+|> update_stacks.({1, 1, 2})
+|> dbg()
+```
+
+```elixir
+print_stacks = fn stacks ->
+  stacks
+  |> Enum.sort_by(fn {k, _v} -> k end)
+  |> Enum.map(fn {_k, v} -> List.first(v) end)
+  |> IO.puts()
+end
+```
+
+```elixir
+# using for
+for command <- commands, reduce: stacks do
+  state -> update_stacks.(state, command)
+end
+|> print_stacks.()
+```
+
+```elixir
+# using enum
+commands
+|> Enum.reduce(stacks, fn command, state ->
+  update_stacks.(state, command)
+end)
+|> print_stacks.()
+```
