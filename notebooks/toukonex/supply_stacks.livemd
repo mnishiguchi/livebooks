@@ -12,7 +12,7 @@
 ## Answer 1
 
 ```elixir
-drawing = """
+input = """
     [D]    
 [N] [C]    
 [Z] [M] [P]
@@ -24,20 +24,56 @@ move 2 from 2 to 1
 move 1 from 1 to 2
 """
 
-stacks = %{
-  1 => ["N", "Z"],
-  2 => ["D", "C", "M"],
-  3 => ["P"]
-}
+[stacks_input, commands_input] = String.split(input, "\n\n", trim: true)
+```
 
-commands = [
-  {1, 2, 1},
-  {3, 1, 3},
-  {2, 2, 1},
-  {1, 1, 2}
-]
+```elixir
+parse_stacks = fn stacks_input ->
+  stacks_input
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn row ->
+    row
+    |> String.split("", trim: true)
+    |> Enum.chunk_every(4)
+    |> Enum.map(fn
+      ["[", crate | _] -> crate
+      [" ", " " | _] -> nil
+      row -> Enum.join(row) |> String.trim() |> String.to_integer()
+    end)
+  end)
+  |> Enum.zip()
+  |> Enum.map(fn stack_tpl ->
+    last_index = tuple_size(stack_tpl) - 1
 
-:ok
+    {
+      elem(stack_tpl, last_index),
+      Tuple.delete_at(stack_tpl, last_index)
+      |> Tuple.to_list()
+      |> Enum.reject(&is_nil/1)
+    }
+  end)
+  |> Map.new()
+end
+
+stacks = parse_stacks.(stacks_input)
+```
+
+```elixir
+parse_commands = fn commands_input ->
+  commands_input
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn command ->
+    captures = Regex.named_captures(~r/move (?<move>\d)+ from (?<from>\d)+ to (?<to>\d)/, command)
+
+    {
+      String.to_integer(captures["move"]),
+      String.to_integer(captures["from"]),
+      String.to_integer(captures["to"])
+    }
+  end)
+end
+
+commands = parse_commands.(commands_input)
 ```
 
 ```elixir
