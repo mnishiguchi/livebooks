@@ -1,0 +1,44 @@
+# 闘魂 Elixir ── Tuning Trouble
+
+```elixir
+# Mix.install([{:benchee, "~> 1.1"}])
+```
+
+## About
+
+* [闘魂Elixir ── Advent of Code 2022 (Day 6: Tuning Trouble)をElixirで楽しむ](https://qiita.com/torifukukaiou/items/e545a0dd92d06237b2c5)
+* [Advent of Code 2022 --- Day 6: Tuning Trouble](https://adventofcode.com/2022/day/6)
+
+## Answers
+
+```elixir
+input = "mjqjpqmgbljsphdztnvjfqwrcgsmlb"
+input |> to_charlist()
+```
+
+```elixir
+judge = &(length(Enum.uniq(&1)) == 4)
+
+true = judge.([1, 2, 3, 4])
+false = judge.([1, 2, 3, 1])
+
+:ok
+```
+
+```elixir
+"mjqjpqmgbljsphdztnvjfqwrcgsmlb"
+|> to_charlist()
+|> Enum.with_index()
+|> Enum.reduce_while([], fn {x, i}, word ->
+  new_word = Enum.take([x] ++ word, 4)
+
+  case length(Enum.uniq(new_word)) do
+    4 -> {:halt, i + 1}
+    _ -> {:cont, new_word}
+  end
+end)
+|> case do
+  x when is_number(x) -> x
+  _ -> :error
+end
+```
