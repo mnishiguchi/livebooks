@@ -1,0 +1,199 @@
+# 闘魂Elixir ── ボーリングの点数計算をElixirで楽しむ
+
+## About
+
+* ボーリングの点数計算
+* [闘魂Elixir ── ボーリングの点数計算をElixirで楽しむ](https://qiita.com/torifukukaiou/items/48ba0b0939e6f1cd3c9e)
+* [TheBowlingGameKata](http://butunclebob.com/ArticleS.UncleBob.TheBowlingGameKata)
+
+## Answer
+
+```elixir
+defmodule BowlingGameKata do
+  def score!(list), do: do_score(list, false, [], 0)
+
+  def do_score([], _spared, _strikes, score_acc), do: score_acc
+
+  def do_score([frame | rest], spared, strikes, score_acc) do
+    new_score_acc = score_acc + calc_score(frame, spared, strikes)
+
+    do_score(
+      rest,
+      spare?(frame),
+      update_strikes(frame, strikes),
+      new_score_acc
+    )
+  end
+
+  defp calc_score({10}, true, []), do: 10 + 10
+  defp calc_score({10}, false, []), do: 0
+  defp calc_score({10}, false, [10]), do: 0
+  defp calc_score({10}, false, [10, 10]), do: 30
+  defp calc_score({a, b, c}, true, []), do: 10 + a + (a + b + c)
+  defp calc_score({a, b, c}, false, []), do: a + b + c
+  defp calc_score({a, b, c}, false, [10]), do: 10 + a + b + (a + b + c)
+  defp calc_score({a, b, c}, false, [10, 10]), do: 10 + 10 + a + (10 + a + b) + (a + b + c)
+  defp calc_score({a, b}, true, []) when a + b == 10, do: 10 + a
+  defp calc_score({a, b}, false, []) when a + b == 10, do: 0
+  defp calc_score({a, b}, false, [10]) when a + b == 10, do: 10 + a + b
+  defp calc_score({a, b}, false, [10, 10]) when a + b == 10, do: 10 + 10 + a + (10 + a + b)
+  defp calc_score({a, b}, true, []), do: 10 + a + (a + b)
+  defp calc_score({a, b}, false, []), do: a + b
+  defp calc_score({a, b}, false, [10]), do: 10 + a + b + (a + b)
+  defp calc_score({a, b}, false, [10, 10]), do: 10 + 10 + a + (10 + a + b) + (a + b)
+
+  defp spare?({a, b}) when a + b == 10, do: true
+  defp spare?(_), do: false
+
+  defp update_strikes({10}, []), do: [10]
+  defp update_strikes({10}, [10]), do: [10, 10]
+  defp update_strikes({10}, [10, 10]), do: [10, 10]
+  defp update_strikes(_, []), do: []
+  defp update_strikes(_, [10]), do: []
+  defp update_strikes(_, [10, 10]), do: []
+end
+
+## Test 
+
+ExUnit.start(auto_run: false)
+
+defmodule BowlingGameKataTest do
+  use ExUnit.Case, async: false
+
+  test "all 0" do
+    list = List.duplicate({0, 0}, 10)
+    assert BowlingGameKata.score!(list) == 0
+  end
+
+  test "all 1" do
+    list = List.duplicate({1, 1}, 10)
+    assert BowlingGameKata.score!(list) == 20
+  end
+
+  test "spare" do
+    list = [{5, 5}, {3, 0}] ++ List.duplicate({0, 0}, 8)
+    assert BowlingGameKata.score!(list) == 16
+  end
+
+  test "strike" do
+    list = [{10}, {3, 4}] ++ List.duplicate({0, 0}, 8)
+    assert BowlingGameKata.score!(list) == 24
+  end
+
+  test "perfect game" do
+    list = List.duplicate({10}, 9) ++ [{10, 10, 10}]
+    assert BowlingGameKata.score!(list) == 300
+  end
+
+  test "scoring bowling 1" do
+    list = [{1, 4}, {4, 5}, {6, 4}, {5, 5}, {10}, {0, 1}, {7, 3}, {6, 4}, {10}, {2, 8, 6}]
+    assert BowlingGameKata.score!(list) == 133
+  end
+
+  test "scoring bowling 2" do
+    list = List.duplicate({1, 1}, 9) ++ [{1, 9, 1}]
+    assert BowlingGameKata.score!(list) == 29
+  end
+
+  test "scoring bowling 3" do
+    # https://hideo002.com/archives/5639
+    list = [{3, 5}, {6, 1}, {3, 2}, {7, 1}, {10}, {9, 1}, {10}, {10}, {2, 5}, {2, 8, 3}]
+    assert BowlingGameKata.score!(list) == 127
+  end
+
+  test "scoring bowling 4" do
+    # https://nageyo.com/score/
+    list = [{9, 1}, {8, 0}, {10}, {10}, {9, 0}, {10}, {10}, {10}, {7, 3}, {9, 1, 10}]
+    assert BowlingGameKata.score!(list) == 199
+  end
+
+  test "scoring bowling 5" do
+    # https://codezine.jp/article/detail/13320
+    list = [{6, 4}, {8, 0}, {10}, {2, 7}, {5, 5}, {3, 4}, {10}, {9, 1}, {1, 2}, {7, 1}]
+    assert BowlingGameKata.score!(list) == 116
+  end
+
+  test "scoring bowling 6" do
+    # https://codezine.jp/article/detail/13320
+    list = [{1, 8}, {9, 1}, {7, 2}, {10}, {0, 0}, {9, 1}, {3, 6}, {8, 0}, {5, 4}, {10, 8, 1}]
+    assert BowlingGameKata.score!(list) == 103
+  end
+
+  test "scoring bowling 7" do
+    list = List.duplicate({0, 0}, 7) ++ [{10}, {10}, {10, 10, 0}]
+    assert BowlingGameKata.score!(list) == 80
+  end
+
+  test "scoring bowling 8" do
+    list = List.duplicate({0, 0}, 7) ++ [{10}, {10}, {5, 5, 0}]
+    assert BowlingGameKata.score!(list) == 55
+  end
+
+  test "scoring bowling 9" do
+    list = List.duplicate({0, 0}, 7) ++ [{10}, {10}, {0, 0}]
+    assert BowlingGameKata.score!(list) == 30
+  end
+
+  test "scoring bowling 10" do
+    list = List.duplicate({0, 0}, 7) ++ [{10}, {5, 5}, {10, 10, 0}]
+    assert BowlingGameKata.score!(list) == 60
+  end
+
+  test "scoring bowling 11" do
+    list = List.duplicate({0, 0}, 7) ++ [{10}, {5, 5}, {5, 5, 0}]
+    assert BowlingGameKata.score!(list) == 45
+  end
+
+  test "scoring bowling 12" do
+    list = List.duplicate({0, 0}, 7) ++ [{10}, {5, 5}, {0, 0}]
+    assert BowlingGameKata.score!(list) == 30
+  end
+
+  test "scoring bowling 13" do
+    list = List.duplicate({0, 0}, 7) ++ [{5, 5}, {10}, {10, 10, 0}]
+    assert BowlingGameKata.score!(list) == 70
+  end
+
+  test "scoring bowling 14" do
+    list = List.duplicate({0, 0}, 7) ++ [{5, 5}, {10}, {5, 5, 0}]
+    assert BowlingGameKata.score!(list) == 50
+  end
+
+  test "scoring bowling 15" do
+    list = List.duplicate({0, 0}, 7) ++ [{5, 5}, {10}, {0, 0}]
+    assert BowlingGameKata.score!(list) == 30
+  end
+
+  test "scoring bowling 16" do
+    list = List.duplicate({0, 0}, 8) ++ [{5, 5}, {10, 10, 0}]
+    assert BowlingGameKata.score!(list) == 40
+  end
+
+  test "scoring bowling 17" do
+    list = List.duplicate({0, 0}, 8) ++ [{5, 5}, {5, 5, 0}]
+    assert BowlingGameKata.score!(list) == 25
+  end
+
+  test "scoring bowling 18" do
+    list = List.duplicate({0, 0}, 8) ++ [{5, 5}, {0, 0}]
+    assert BowlingGameKata.score!(list) == 10
+  end
+
+  test "scoring bowling 19" do
+    list = List.duplicate({0, 0}, 9) ++ [{10, 10, 0}]
+    assert BowlingGameKata.score!(list) == 20
+  end
+
+  test "scoring bowling 20" do
+    list = List.duplicate({0, 0}, 9) ++ [{5, 5, 0}]
+    assert BowlingGameKata.score!(list) == 10
+  end
+
+  test "scoring bowling 21" do
+    list = List.duplicate({0, 0}, 9) ++ [{0, 0}]
+    assert BowlingGameKata.score!(list) == 0
+  end
+end
+
+ExUnit.run()
+```
