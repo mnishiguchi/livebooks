@@ -10,7 +10,7 @@
 
 ```elixir
 defmodule BowlingGameKata do
-  def score!(list), do: do_score(list, false, [], 0)
+  def score!(frames), do: do_score(frames, false, [], 0)
 
   def do_score([], _spared, _strikes, score_acc), do: score_acc
 

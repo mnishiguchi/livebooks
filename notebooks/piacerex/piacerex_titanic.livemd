@@ -5,11 +5,10 @@ Mix.install([
   {:nx, "~> 0.4"},
   {:axon, "~> 0.3"},
   {:exla, "~> 0.4"},
-  {:csv, "~> 3.0"}
+  {:csv, "~> 3.0"},
+  {:statistics, "~> 0.6"},
+  {:kino_vega_lite, "~> 0.1.7"}
 ])
-
-File.cd!("../notebooks/piacerex/titanic")
-File.cwd!()
 ```
 
 ## 概要
@@ -21,7 +20,8 @@ File.cwd!()
 
 ## 資料
 
-* [Eixirで機械学習に初挑戦④：ElixirでKaggleに挑戦…「データ前処理」基礎編](https://qiita.com/piacerex/items/a40c5d24190d59f68610) by piacerex
+* [Eixirで機械学習に初挑戦④：ElixirでKaggleに挑戦（前編）](https://qiita.com/piacerex/items/a40c5d24190d59f68610) by piacerex
+* [Eixirで機械学習に初挑戦⑤：ElixirでKaggleに挑戦（後編）](https://qiita.com/piacerex/items/bf283a63945040c25a72) by piacerex
 * [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
 
 ## ⅰ）学習データの準備
@@ -30,7 +30,11 @@ File.cwd!()
 
 * Download [titanic data](https://www.kaggle.com/competitions/titanic/data)
 
-<!-- livebook:{"break_markdown":true} -->
+```elixir
+titanic_dir = "../notebooks/piacerex/titanic"
+train_data_csv_file = Path.join(titanic_dir, "train.csv")
+test_data_csv_file = Path.join(titanic_dir, "test.csv")
+```
 
 ### ⅰ-2．生データをLivebookにロード
 
@@ -42,7 +46,7 @@ load_raw_train_data = fn file_path ->
   |> Enum.to_list()
 end
 
-train_csv_rows = load_raw_train_data.("train.csv")
+train_csv_rows = load_raw_train_data.(train_data_csv_file)
 ```
 
 ### ⅰ-3．データ操作しやすくするためにマップ群に変換
@@ -158,27 +162,38 @@ train_csv_maps_dropped =
 
 #### ④欠損値の補完
 
+##### 補完対象
+
 * 欠損値のうち、`cabin`は列ごと削除されたので、残る`age`と`emberked`が補完対象
-* ここではいったん、ageは「0」、emberkedは「S」で補完
+
+##### 補完方法
+
+* 中央値／平均値／最頻値など、該当項目の統計値で補完
+* 該当項目以外のデータ群から、該当項目の値を推測
+* 欠損していること自体が特徴となる場合、欠損値をカテゴリ値として扱う
+* 全項目の欠損傾向から、新たな項目を作り、欠損値は削除する
+
+##### 資料
+
+* [欠損値（missing value）の種類](https://mmbiostats.com/missing_value_classification)
+* [平均値で埋めるだけじゃない！少し踏み込んだ欠損値補完](https://qiita.com/bigshiny_0328/items/d6b8eb1be2971e1e81be)
 
 ```elixir
 complete_missing_values = fn datas, mapping ->
   for {key, replacement_value} <- mapping, reduce: datas do
     acc ->
-      Enum.map(
-        acc,
-        &Map.replace!(
-          &1,
-          key,
-          String.replace(Map.fetch!(&1, key), ~r/^$/, replacement_value)
-        )
-      )
+      for entry <- acc do
+        empty_string_regex = ~r/^$/
+        current_value = Map.fetch!(entry, key)
+        new_value = String.replace(current_value, empty_string_regex, replacement_value)
+        Map.replace!(entry, key, new_value)
+      end
   end
 end
 
 train_csv_maps_replaced =
   train_csv_maps_dropped
-  |> complete_missing_values.(embarked: "S", age: "0")
+  |> complete_missing_values.(embarked: "S", age: "30", fare: "32")
 ```
 
 #### ⑤カテゴリ値（種別文字列）を数値に変換
@@ -190,7 +205,7 @@ train_csv_maps_replaced =
 ```elixir
 make_dummy_mapping = fn datas, key ->
   datas
-  |> Enum.map(&Map.fetch!(&1, key))
+  |> Enum.map(&Map.get(&1, key))
   |> Enum.uniq()
   |> Enum.with_index(&{&1, String.to_float("#{&2}.0")})
   |> Enum.into(%{})
@@ -205,23 +220,36 @@ make_dummy_mapping.(train_csv_maps_replaced, :embarked)
 make_dummy_mapping.(train_csv_maps_replaced, :sex)
 ```
 
+```elixir
+make_dummy_mapping.(train_csv_maps_replaced, :foo)
+```
+
 ポイント：検証データや未知データではカテゴリ値が網羅されていないケースへの対策として、学習データからカテゴリ値を拾えるようにするため、あらかじめカテゴリ値生成用のデータを別に受け取れるようにしておく。
 
 ```elixir
+default_dummy = 10.0
+
 replace_with_dummies = fn datas, dummy_source, keys ->
   for key <- keys, reduce: datas do
     acc ->
-      Enum.map(acc, fn entry ->
-        dummy_mapping = make_dummy_mapping.(dummy_source, key)
-        current_value = Map.fetch!(entry, key)
-        %{entry | key => Map.fetch!(dummy_mapping, current_value)}
-      end)
+      dummy_mapping = make_dummy_mapping.(dummy_source, key)
+
+      if dummy_mapping do
+        acc
+        |> Enum.map(fn entry ->
+          current_value = entry[key]
+          dummy_value = dummy_mapping[current_value] || default_dummy
+          Map.put(entry, key, dummy_value)
+        end)
+      else
+        acc
+      end
   end
 end
 
 train_csv_maps_dummied =
   train_csv_maps_replaced
-  |> replace_with_dummies.(train_csv_maps_replaced, [:embarked, :sex])
+  |> replace_with_dummies.(train_csv_maps_replaced, [:embarked, :sex, :honor])
 ```
 
 #### ⑥整数を小数に変換
@@ -232,25 +260,35 @@ train_csv_maps_dummied =
 * 整数と小数が混在する列は、文字列から数値への変換を`String.to_integer`と`String.to_float`を使い分けしなければならなくて面倒なため、整数文字列を全て小数文字列に変換した上で、小数に変換
 
 ```elixir
+numeric_fields = [:age, :fare, :parch, :pclass, :sibsp]
+
 replace_numeric_string_with_float = fn datas, keys ->
   for key <- keys, reduce: datas do
     acc ->
-      Enum.map(
-        acc,
-        &Map.replace!(
-          &1,
-          key,
-          Map.fetch!(&1, key)
-          |> String.replace(~r/^(?!.*\.).*$/, "\\0\.0")
-          |> String.to_float()
-        )
-      )
+      for entry <- acc do
+        case Map.fetch!(entry, key) do
+          current_value when is_number(current_value) ->
+            entry
+
+          nil ->
+            raise("key #{key} is nil: #{inspect(entry)}")
+
+          current_value ->
+            entry
+            |> Map.replace!(
+              key,
+              current_value
+              |> String.replace(~r/^(?!.*\.).*$/, "\\0\.0")
+              |> String.to_float()
+            )
+        end
+      end
   end
 end
 
 train_csv_maps_numericized =
   train_csv_maps_dummied
-  |> replace_numeric_string_with_float.([:age, :fare, :parch, :pclass, :sibsp])
+  |> replace_numeric_string_with_float.(numeric_fields)
 ```
 
 #### ⑦数値を行列に変換
@@ -274,34 +312,239 @@ train_csv_datas =
 
 * ここまでの「データ前処理」をprocessという関数で1発で完了するようにします
 
+### ⅰ-5．精度を向上させるための「データ前処理」
+
+<!-- livebook:{"break_markdown":true} -->
+
+#### ①年齢と料金の補完値を中央値に修正
+
+* ここでは、比較的カンタンに実装できる中央値／平均値を取り上げる
+
+##### ageのデータ分布
+
+まず、グラフでageのデータ分布を見てみる（学習データに欠損値が存在するのでEnum.rejectで除去）
+
+```elixir
+ages =
+  train_csv_maps
+  |> Enum.reject(&(&1.age == ""))
+  |> replace_numeric_string_with_float.([:age])
+  |> Enum.map(&Map.take(&1, [:ticket, :age]))
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"point","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"ages","x_field":"ticket","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"nominal","y_field":"age","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":800},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 800, height: 400)
+|> VegaLite.data_from_values(ages, only: ["ticket", "age"])
+|> VegaLite.mark(:point)
+|> VegaLite.encode_field(:x, "ticket", type: :nominal)
+|> VegaLite.encode_field(:y, "age", type: :quantitative)
+```
+
+Elixirで統計を取得するときに便利なライブラリ「Statistics」を使って、中央値／平均値／最頻値を取ってみる
+
+```elixir
+## 中央値
+
+ages
+|> Enum.map(& &1.age)
+|> Statistics.median()
+```
+
+```elixir
+## 平均値
+
+ages
+|> Enum.map(& &1.age)
+|> Statistics.mean()
+```
+
+```elixir
+## 最頻値
+
+ages
+|> Enum.map(& &1.age)
+|> Statistics.mode()
+```
+
+##### fareのデータ分布
+
+```elixir
+fares =
+  train_csv_maps
+  |> replace_numeric_string_with_float.([:fare])
+  |> Enum.map(&Map.take(&1, [:ticket, :fare]))
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"point","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"fares","x_field":"ticket","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"nominal","y_field":"fare","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":800},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 800, height: 400)
+|> VegaLite.data_from_values(fares, only: ["ticket", "fare"])
+|> VegaLite.mark(:point)
+|> VegaLite.encode_field(:x, "ticket", type: :nominal)
+|> VegaLite.encode_field(:y, "fare", type: :quantitative)
+```
+
+```elixir
+fares
+|> Enum.map(& &1.fare)
+|> Statistics.median()
+```
+
+```elixir
+fares
+|> Enum.map(& &1.fare)
+|> Statistics.mean()
+```
+
+```elixir
+fares
+|> Enum.map(& &1.fare)
+|> Statistics.mode()
+```
+
+#### ②EDA（探索的データ分析）に基づく改善アイデア
+
+* モデルを作る前に、データに何らかの傾向を見出す
+  * データ分布の特性や偏りを発見
+  * 特徴の例外たる「外れ値」を除外
+* スプレッドシートやExcelの利用が有効なことも多い
+
+<!-- livebook:{"break_markdown":true} -->
+
+##### 敬称（title of honor）を集計
+
+* `name`フィールドから敬称を取り出し、その値を`honor`フィールドに追加する
+
+```elixir
+# <first name>, <honor>. <last name>
+# E.g., "Braund, Mr. Owen Harris"
+name_to_honor = fn name ->
+  name
+  # `<first name>, `を取り除く
+  |> String.replace(~r/^.*, /, "")
+  # `. <last name>`を取り除く
+  |> String.replace(~r/. .*/, "")
+end
+
+put_honor = &Map.put(&1, :honor, name_to_honor.(&1.name))
+
+train_datas_with_honor =
+  load_raw_train_data.(train_data_csv_file)
+  |> raw_train_data_to_maps.()
+  |> Enum.map(put_honor)
+```
+
+```elixir
+honor_counts =
+  train_datas_with_honor
+  |> Enum.map(& &1.honor)
+  |> Enum.frequencies()
+  |> Enum.map(fn {k, v} -> %{honor: k, count: v} end)
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":200,"layers":[{"chart_type":"bar","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"honor_counts","x_field":"honor","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"nominal","y_field":"count","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 200)
+|> VegaLite.data_from_values(honor_counts, only: ["honor", "count"])
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "honor", type: :nominal)
+|> VegaLite.encode_field(:y, "count", type: :quantitative)
+```
+
+##### `honor`と`survived`の相関関係を確認
+
+```elixir
+survived_honor_count =
+  train_datas_with_honor
+  |> Enum.map(&Map.take(&1, [:honor, :survived]))
+  |> Enum.frequencies()
+  |> Enum.map(fn {k, v} -> %{survived_honor: "#{k.honor}-#{k.survived}", count: v} end)
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"bar","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"survived_honor_count","x_field":"survived_honor","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"nominal","y_field":"count","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":800},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 800, height: 400)
+|> VegaLite.data_from_values(survived_honor_count, only: ["survived_honor", "count"])
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "survived_honor", type: :nominal)
+|> VegaLite.encode_field(:y, "count", type: :quantitative)
+```
+
+##### `sex`と`survived`の相関関係を確認
+
+```elixir
+survived_sex_counts =
+  load_raw_train_data.(train_data_csv_file)
+  |> raw_train_data_to_maps.()
+  |> Enum.map(&Map.take(&1, [:sex, :survived]))
+  |> Enum.frequencies()
+  |> Enum.map(fn {k, v} -> %{survived_sex: "#{k.sex}-#{k.survived}", count: v} end)
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"bar","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"survived_sex_counts","x_field":"survived_sex","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"nominal","y_field":"count","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400)
+|> VegaLite.data_from_values(survived_sex_counts, only: ["survived_sex", "count"])
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "survived_sex", type: :nominal)
+|> VegaLite.encode_field(:y, "count", type: :quantitative)
+```
+
+#### ⅰ-6．「データ前処理」全体の関数化
+
+* ここまでの「データ前処理」をprocessという関数で1発で完了するようにします
+
 ```elixir
 missing_value_mapping = [embarked: "S", age: "0", fare: "0"]
-```
 
-```elixir
-ignored_keys = [:cabin, :name, :ticket]
-```
+ignored_fields = [:cabin, :name, :ticket]
 
-```elixir
+dummied_fields = [:embarked, :sex, :honor]
+
+numeric_fields = [:age, :fare, :parch, :pclass, :sibsp]
+
 load_datas_from_csv_file = fn file_path ->
   load_raw_train_data.(file_path)
   |> raw_train_data_to_maps.()
   |> separate_ids_and_labels.(:passengerid, :survived)
 end
 
+put_honor = fn datas ->
+  for entry <- datas do
+    Map.put(
+      entry,
+      :honor,
+      # <first name>, <honor>. <last name>
+      # E.g., "Braund, Mr. Owen Harris"
+      entry.name
+      # `<first name>, `を取り除く
+      |> String.replace(~r/^.*, /, "")
+      # `. <last name>`を取り除く
+      |> String.replace(~r/. .*/, "")
+    )
+  end
+end
+
 process_datas = fn datas, dummy_source ->
   datas
-  |> drop_columns.(ignored_keys)
+  |> put_honor.()
+  |> drop_columns.(ignored_fields)
   |> complete_missing_values.(missing_value_mapping)
   |> replace_with_dummies.(
     dummy_source |> complete_missing_values.(missing_value_mapping),
-    [:embarked, :sex]
+    dummied_fields
   )
-  |> replace_numeric_string_with_float.([:age, :fare, :parch, :pclass, :sibsp])
+  |> replace_numeric_string_with_float.(numeric_fields)
   |> maps_to_tensors.()
 end
 
-{train_csv_ids, train_csv_labels, train_csv_maps} = load_datas_from_csv_file.("train.csv")
+{train_csv_ids, train_csv_labels, train_csv_maps} = load_datas_from_csv_file.(train_data_csv_file)
 
 train_datas =
   process_datas.(train_csv_maps, train_csv_maps)
@@ -309,6 +552,16 @@ train_datas =
 ```
 
 ## ⅱ）モデルの学習
+
+### 学習時のランダム性
+
+* 学習済みモデルでの予測は、同じデータに対して常に同じ予測を返す一方、学習は毎回、異なるモデルを生成するため、予測精度に変化が出る
+* 最適化関数の「Adam」のベースとなっている「SGD」がランダムにデータを取り出している
+* https://kunassy.com/oprimizer/#toc5
+
+<!-- livebook:{"break_markdown":true} -->
+
+###
 
 ```elixir
 model =
@@ -332,16 +585,44 @@ trained_state =
 #### ①未知データのロードと学習データの列差異の確認
 
 * 未知データにはラベルが無い
+* 未知データ中に、学習データに無いパターンが存在しているかも知れません
 
 ```elixir
-[train_csv_header | _] = load_raw_train_data.("train.csv")
-[test_csv_header | _] = load_raw_train_data.("test.csv")
+[train_csv_header | _] = load_raw_train_data.(train_data_csv_file)
+[test_csv_header | _] = load_raw_train_data.(test_data_csv_file)
 
 train_csv_header -- test_csv_header
 ```
 
 ```elixir
-{test_csv_ids, _, test_csv_maps} = load_datas_from_csv_file.("test.csv")
+{test_csv_ids, _, test_csv_maps} = load_datas_from_csv_file.(test_data_csv_file)
+```
+
+`honor`のラベルを確認
+
+<!-- livebook:{"break_markdown":true} -->
+
+####
+
+```elixir
+{_, _, train_csv_maps} = load_datas_from_csv_file.(train_data_csv_file)
+{_, _, test_csv_maps} = load_datas_from_csv_file.(test_data_csv_file)
+
+honor_counts = fn csv_maps ->
+  csv_maps
+  |> put_honor.()
+  |> Enum.map(& &1.honor)
+  |> Enum.frequencies()
+end
+
+honor_counts_train = honor_counts.(train_csv_maps)
+honor_counts_test = honor_counts.(test_csv_maps)
+
+[train: honor_counts_train, test: honor_counts_test]
+```
+
+```elixir
+Map.keys(honor_counts_test) -- Map.keys(honor_counts_train)
 ```
 
 #### ②空白値の確認
@@ -355,7 +636,7 @@ test_csv_maps
 
 ```elixir
 test_csv_maps
-|> drop_columns.(ignored_keys)
+|> drop_columns.(ignored_fields)
 |> complete_missing_values.(missing_value_mapping)
 |> count_missing_values.()
 ```
@@ -363,7 +644,7 @@ test_csv_maps
 #### ③未知データに対する予測の実施
 
 ```elixir
-{test_csv_ids, _, test_csv_maps} = load_datas_from_csv_file.("test.csv")
+{test_csv_ids, _, test_csv_maps} = load_datas_from_csv_file.(test_data_csv_file)
 
 # 第二引数に、学習データを渡すことがポイント
 # これは検証データや未知データではカテゴリ値が網羅されていないケースへの対策
