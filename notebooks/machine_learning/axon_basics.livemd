@@ -1,0 +1,138 @@
+# AxonのHello world
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.4.0"},
+  {:kino_vega_lite, "~> 0.1.0"},
+  {:axon, "~> 0.3.0"}
+])
+```
+
+## About
+
+* Axonを使って線形回帰のパラメータ（傾きと切片）の値を求める
+* 最も簡単な、`y = ax + b`にフィッテング
+
+## Resources
+
+* [Axonを使って線形回帰のパラメータ（傾きと切片）の値を求めてみよう](https://qiita.com/GeekMasahiro/items/a527eb12304ed75cc71f)
+* [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc)
+* https://hexdocs.pm/axon/0.2.0/multi_input_example.html#everything-together
+* https://hexdocs.pm/axon/Axon.html
+
+## 処理の流れ
+
+* `y = 2 * x + 0.5 + 乱数`の`{x,y}`の組を100個つくる
+* `train_model()`で、フィッティングする
+* 結果表示
+
+## 乱数を作る関数
+
+```elixir
+gen_random = fn n -> for _ <- 1..n, do: [:rand.uniform()] end
+```
+
+## y = 2 * x + 0.5 + 乱数
+
+```elixir
+x =
+  gen_random.(100)
+  |> Nx.tensor()
+  |> dbg()
+
+y =
+  Nx.multiply(x, 2)
+  |> Nx.add(0.5)
+  |> Nx.add(Nx.tensor(gen_random.(100)))
+  |> dbg()
+
+:ok
+```
+
+## Everything together
+
+```elixir
+defmodule HelloAxon do
+  require Axon
+
+  ## Model 
+
+  def build_model(input_shape) do
+    inp = Axon.input("x", shape: input_shape)
+
+    inp
+    |> Axon.dense(1)
+  end
+
+  ## Data 
+
+  def batch(n \\ 100) do
+    x = gen_random(n) |> Nx.tensor()
+
+    f = fn x ->
+      Nx.multiply(x, 2)
+      |> Nx.add(0.5)
+      |> Nx.add(Nx.tensor(gen_random(n)))
+    end
+
+    {x, f.(x)}
+  end
+
+  def gen_random(n) do
+    for _ <- 1..n, do: [:rand.uniform()]
+  end
+
+  ## Training
+
+  def train_model(model, data, epochs) do
+    model
+    |> Axon.Loop.trainer(:mean_squared_error, :sgd)
+    |> Axon.Loop.run(data, %{}, epochs: epochs, iterations: 1000)
+  end
+
+  ## Evaluation of the model
+
+  def run do
+    model = build_model({nil})
+    data_xy = batch(100)
+    data = Stream.repeatedly(fn -> data_xy end)
+
+    model_state =
+      train_model(model, data, 10)
+      |> IO.inspect(label: "model_state")
+
+    predicted_y =
+      Axon.predict(model, model_state, %{
+        "x" =>
+          Nx.tensor([[0, 1]])
+          |> Nx.transpose()
+      })
+
+    {data_xy, predicted_y}
+  end
+end
+```
+
+## Get results
+
+```elixir
+{{data_x, data_y}, predicted_y} = HelloAxon.run()
+```
+
+## Visualize the results
+
+```elixir
+VegaLite.new(width: 600, height: 600)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.data_from_values(x: data_x |> Nx.to_flat_list(), y: data_y |> Nx.to_flat_list())
+  |> VegaLite.mark(:point, tooltip: true)
+  |> VegaLite.encode_field(:x, "x", type: :quantitative)
+  |> VegaLite.encode_field(:y, "y", type: :quantitative),
+  VegaLite.new()
+  |> VegaLite.data_from_values(x: [0, 1], y: Nx.to_flat_list(predicted_y))
+  |> VegaLite.mark(:line)
+  |> VegaLite.encode_field(:x, "x", type: :quantitative)
+  |> VegaLite.encode_field(:y, "y", type: :quantitative)
+])
+```

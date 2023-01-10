@@ -1,0 +1,14 @@
+# 機械学習
+
+## Index
+
+* [bumblebee](./bumblebee/index.livemd)
+* [AxonのHello world](./axon_basics.livemd)
+* [教師あり学習（ORの予測）](./logical_or.livemd)
+* [手書き文字識別（MNIST）](./mnist.livemd)
+* [Kaggleに挑戦](./kaggle_basics.livemd)
+* [Evision基本編](./evision_basics.livemd)
+
+## 資料
+
+- [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc)

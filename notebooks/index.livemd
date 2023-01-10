@@ -2,6 +2,8 @@
 
 ## Index
 
-* [bumblebee](./bumblebee/index.livemd)
-* [piacerex](./piacerex/index.livemd)
-* [utils](./utils/index.livemd)
+* [machine_learning](./machine_learning/index.livemd)
+* [mogrify](./mogrify.livemd)
+* [multiplication_table](./multiplication_table.livemd)
+* [notebook_link](./notebook_link.livemd)
+* [tzdata](./tzdata.livemd)
