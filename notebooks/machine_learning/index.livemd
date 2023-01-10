@@ -3,15 +3,10 @@
 ## Index
 
 * [bumblebee](./bumblebee/index.livemd)
-
-### [Piacerex](https://qiita.com/piacerex)'s lectures
-
+* [AxonのHello world](./axon_basics.livemd)
 * [教師あり学習（ORの予測）](./logical_or.livemd)
 * [手書き文字識別（MNIST）](./mnist.livemd)
 * [Kaggleに挑戦](./kaggle_basics.livemd)
-
-### [The haigo](https://qiita.com/the_haigo)'s lectures
-
 * [Evision基本編 Evision(OpenCV)でお手軽画像処理](https://qiita.com/the_haigo/items/baf47624567cb992d934)
 
 ## 資料
