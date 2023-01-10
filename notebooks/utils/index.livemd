@@ -1,9 +1,0 @@
-# utils
-
-## About
-
-* some convenience tools
-
-## Index
-
-* [Livebook notebook links](./notebook_link.livemd)
