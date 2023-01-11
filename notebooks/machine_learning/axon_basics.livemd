@@ -39,7 +39,7 @@ Mix.install(
 defmodule Main do
   require Axon
 
-  ## Model 
+  ## Model
 
   def build_model(input_shape) do
     # Axon.dense　は、input * kernel + bias の計算をする
@@ -47,7 +47,7 @@ defmodule Main do
     |> Axon.dense(1)
   end
 
-  ## Data 
+  ## Data
 
   def build_batch(n \\ 100) do
     x = generate_random(n)

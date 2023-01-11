@@ -2,6 +2,7 @@
 
 ## Index
 
+* [amqp](./amqp/index.livemd)
 * [machine_learning](./machine_learning/index.livemd)
 * [mogrify](./mogrify.livemd)
 * [multiplication_table](./multiplication_table.livemd)

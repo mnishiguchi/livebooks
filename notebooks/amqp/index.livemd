@@ -1,0 +1,13 @@
+# AMQP
+
+## Index
+
+* [rabbitmq_01_hello_world](./rabbitmq_01_hello_world.livemd)
+* [rabbitmq_02_work_queues](./rabbitmq_02_work_queues.livemd)
+* [rabbitmq_03_pub_sub](./rabbitmq_03_pub_sub.livemd)
+
+## Resources
+
+- [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
+- [amqp - Idiomatic Elixir client for RabbitMQ](https://hex.pm/packages/amqp)
+- https://github.com/rabbitmq/rabbitmq-tutorials/blob/main/elixir
