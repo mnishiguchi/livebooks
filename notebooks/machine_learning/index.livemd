@@ -1,14 +1,18 @@
 # 機械学習
 
-## Index
+## もくじ
 
 * [bumblebee](./bumblebee/index.livemd)
-* [AxonのHello world](./axon_basics.livemd)
+* [Nxの基礎](./nx_basics.livemd)
+* [線型代数学の基礎](./linear_algebra_basics.livemd)
+* [Axonの基礎](./axon_basics.livemd)
 * [教師あり学習（ORの予測）](./logical_or.livemd)
 * [手書き文字識別（MNIST）](./mnist.livemd)
-* [Kaggleに挑戦](./kaggle_basics.livemd)
-* [Evision基本編](./evision_basics.livemd)
+* [タイタニック問題](./titanic.livemd)
+* [Evisionの基礎](./evision_basics.livemd)
 
 ## 資料
 
-- [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc)
+* [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc)
+* [Elixirにて機械学習／ディープラーニングするためのライブラリ ＆ ツール](https://qiita.com/piacerex/items/c406e5737156b9fa114d)
+* [ゼロから作る Deep LearningをElixirで学ぶシリーズ](https://qiita.com/Yoosuke/items/8599ed0a976de1371ead)

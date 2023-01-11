@@ -1,0 +1,457 @@
+# 線型代数学の基礎
+
+```elixir
+Mix.install([{:nx, "~> 0.4"}])
+
+# Mix.install(
+#   [
+#     {:nx, "~> 0.4.0"},
+#     {:exla, "~> 0.4.0"}
+#   ],
+#   config: [nx: [default_backend: EXLA.Backend]]
+# )
+
+import IEx.Helpers
+
+:ok
+```
+
+## 概要
+
+* Elixir Nx を使って基本的な線型代数学の計算をやる
+
+## 資料
+
+* https://hexdocs.pm/nx/Nx.html
+* [深掘り Nx シリーズ ~ tensor を知る ① ~](https://qiita.com/Yoosuke/items/faafc1510bbae99f7036)
+* [深掘り Nx シリーズ ~ tensor を知る ② 算術計算 ~](https://qiita.com/Yoosuke/items/193619975341e560a8f9)
+* [深掘り Nx シリーズ ~ tensor を知る ③ 算術計算その 2 行列の積 ~](https://qiita.com/Yoosuke/items/a961067b17e20240cea3)
+* [線型代数学 - Wikipedia](https://ja.wikipedia.org/wiki/%E7%B7%9A%E5%9E%8B%E4%BB%A3%E6%95%B0%E5%AD%A6)
+* [行列 - Wikipedia](https://ja.wikipedia.org/wiki/%E8%A1%8C%E5%88%97)
+* [中学数学からはじめる AI(人工知能)のための数学入門](https://youtu.be/7A05OamqCyc)
+* [高校 1,2 年生でも分かる線形代数@東京大学](https://youtu.be/EALvwf5UVz0)
+
+## スカラー
+
+```elixir
+_scaler = Nx.tensor(2)
+```
+
+## ベクトル
+
+* 数を（縦や横に）並べたもの
+* 行列の特殊な場合
+
+![55](https://user-images.githubusercontent.com/7563926/212343866-9124b579-0547-4ddc-82c1-843edc803e4c.png)
+
+```elixir
+# 行ベクトル
+_row = Nx.tensor([1, 2, 3])
+```
+
+```elixir
+# 列ベクトル
+_col = Nx.tensor([[1], [3], [8]])
+```
+
+![07](https://user-images.githubusercontent.com/7563926/212343943-30bcf944-23af-4638-a278-9d551ec18a55.png)
+
+```elixir
+col1 = Nx.tensor([[2], [1], [3]])
+col2 = Nx.tensor([[0], [1], [2]])
+
+Nx.add(col1, col2)
+```
+
+```elixir
+col1 = Nx.tensor([[2], [0], [1], [3]])
+col2 = Nx.tensor([[1], [2], [4], [0]])
+
+Nx.subtract(col1, col2)
+```
+
+```elixir
+row = Nx.tensor([2, 3, 0])
+
+Nx.multiply(row, 3)
+```
+
+```elixir
+col = Nx.tensor([[1], [2], [0]])
+
+Nx.multiply(col, -2)
+```
+
+## 行列
+
+* 数を（縦と横に）並べたもの
+
+![17](https://user-images.githubusercontent.com/7563926/212344006-4c63494a-370c-4f2d-ad49-663138fc915e.png)
+
+```elixir
+matrix1 = Nx.tensor([[2, 4], [0, 3]])
+matrix2 = Nx.tensor([[1, 1], [0, -1]])
+
+Nx.add(matrix1, matrix2)
+```
+
+```elixir
+matrix1 = Nx.tensor([[2, 0], [1, 1], [3, 4]])
+matrix2 = Nx.tensor([[0, 1], [2, 3], [-1, 4]])
+
+Nx.subtract(matrix1, matrix2)
+```
+
+![24](https://user-images.githubusercontent.com/7563926/212344042-711358f3-da3a-42a5-8818-ca7c3064624f.png)
+
+```elixir
+matrix1 = Nx.tensor([[1, 2], [3, 4]])
+matrix2 = Nx.tensor([[0, 2], [4, 6]])
+
+Nx.dot(matrix1, matrix2)
+```
+
+```elixir
+matrix1 = Nx.tensor([[1, 2], [3, 4]])
+matrix2 = Nx.tensor([[0, 2], [4, 6]])
+
+Nx.multiply(matrix1, matrix2)
+```
+
+## スカラーの計算
+
+```elixir
+Nx.add(1, 2)
+```
+
+```elixir
+s1 = Nx.tensor(1)
+s2 = Nx.tensor(2)
+
+Nx.add(s1, s2)
+```
+
+```elixir
+s1 = Nx.tensor(5)
+s2 = Nx.tensor(2)
+
+Nx.subtract(s1, s2)
+```
+
+```elixir
+s1 = Nx.tensor(2)
+s2 = Nx.tensor(3)
+
+Nx.multiply(s1, s2)
+```
+
+```elixir
+s1 = Nx.tensor(2)
+s2 = Nx.tensor(3)
+
+Nx.divide(s1, s2)
+```
+
+## スカラーとベクトルの計算
+
+### add
+
+```elixir
+scaler = Nx.tensor(2)
+row = Nx.tensor([1, 2, 3])
+
+Nx.add(scaler, row)
+```
+
+```elixir
+scaler = Nx.tensor(2)
+column = Nx.tensor([[1], [2], [3]])
+
+Nx.add(scaler, column)
+```
+
+### subtract
+
+```elixir
+scaler = Nx.tensor(2)
+row = Nx.tensor([1, 2, 3])
+
+Nx.subtract(scaler, row)
+```
+
+```elixir
+scaler = Nx.tensor(2)
+column = Nx.tensor([[1], [2], [3]])
+
+Nx.subtract(scaler, column)
+```
+
+### multiply
+
+```elixir
+scaler = Nx.tensor(2)
+row = Nx.tensor([1, 2, 3])
+
+Nx.multiply(scaler, row)
+```
+
+```elixir
+scaler = Nx.tensor(2)
+column = Nx.tensor([[1], [2], [3]])
+
+Nx.multiply(scaler, column)
+```
+
+### divide
+
+```elixir
+scaler = Nx.tensor(2)
+row = Nx.tensor([1, 2, 3])
+
+Nx.divide(scaler, row)
+```
+
+```elixir
+scaler = Nx.tensor(2)
+column = Nx.tensor([[1], [2], [3]])
+
+Nx.divide(scaler, column)
+```
+
+## 3 行ベクトルと 3 行ベクトルの計算
+
+```elixir
+row1 = Nx.tensor([1, 2, 3])
+row2 = Nx.tensor([10, 20, 30])
+
+Nx.add(row1, row2)
+```
+
+```elixir
+row1 = Nx.tensor([1, 2, 3])
+row2 = Nx.tensor([10, 20, 30])
+
+Nx.subtract(row1, row2)
+```
+
+```elixir
+row1 = Nx.tensor([1, 2, 3])
+row2 = Nx.tensor([10, 20, 30])
+
+Nx.multiply(row1, row2)
+```
+
+```elixir
+row1 = Nx.tensor([1, 2, 3])
+row2 = Nx.tensor([3, 4, 5])
+
+Nx.divide(row1, row2)
+```
+
+## 3 列ベクトルと 3 列ベクトルの計算
+
+```elixir
+col1 = Nx.tensor([[1], [2], [3]])
+col2 = Nx.tensor([[10], [20], [30]])
+
+Nx.add(col1, col2)
+```
+
+```elixir
+col1 = Nx.tensor([[1], [2], [3]])
+col2 = Nx.tensor([[10], [20], [30]])
+
+Nx.subtract(col1, col2)
+```
+
+```elixir
+col1 = Nx.tensor([[1], [2], [3]])
+col2 = Nx.tensor([[10], [20], [30]])
+
+Nx.multiply(col1, col2)
+```
+
+```elixir
+col1 = Nx.tensor([[1], [2], [3]])
+col2 = Nx.tensor([[3], [4], [5]])
+
+Nx.divide(col1, col2)
+```
+
+## 3 行ベクトルと 3 列ベクトルの計算
+
+```elixir
+import Nx, only: :sigils
+
+row = ~M"""
+10 20 30
+"""s32
+
+col = ~M"""
+1
+2
+3
+"""s32
+
+Nx.add(row, col)
+```
+
+```elixir
+import Nx, only: :sigils
+
+row = ~M"""
+10 20 30
+"""s32
+
+col = ~M"""
+1
+2
+3
+"""s32
+
+Nx.subtract(row, col)
+```
+
+```elixir
+import Nx, only: :sigils
+
+row = ~M"""
+10 20 30
+"""s32
+
+col = ~M"""
+1
+2
+3
+"""s32
+
+Nx.multiply(row, col)
+```
+
+```elixir
+import Nx, only: :sigils
+
+row = ~M"""
+10 20 30
+"""s32
+
+col = ~M"""
+1
+2
+3
+"""s32
+
+Nx.divide(row, col)
+```
+
+## 要素数が違うベクトルの計算
+
+例として 3 行ベクトル x 2 列ベクトル
+
+```elixir
+import Nx, only: :sigils
+
+row = ~M"""
+10 20
+"""s32
+
+col = ~M"""
+1
+2
+3
+"""s32
+
+Nx.add(row, col)
+```
+
+## 行列とベクトルの計算
+
+```elixir
+import Nx, only: :sigils
+
+vec = ~V"""
+10 20
+"""s32
+
+mat = ~M"""
+1 2
+3 4
+"""s32
+
+Nx.add(mat, vec)
+```
+
+## 行列と行列の計算
+
+同じ位置の要素同士で計算
+
+```elixir
+t1 = ~M"""
+1 0 1
+3 2 0
+1 1 2
+"""
+
+t2 = ~M"""
+0 3 1
+2 0 1
+0 2 0
+"""
+
+Nx.multiply(t1, t2)
+```
+
+## 行列の積
+
+* [行列の乗法](https://ja.wikipedia.org/wiki/%E8%A1%8C%E5%88%97%E3%81%AE%E4%B9%97%E6%B3%95)
+* [Difference between np.dot and np.multiply with np.sum in binary cross-entropy loss calculation](https://stackoverflow.com/a/48201957/3837223)
+
+### 要素ごとの積
+
+```
+|A B| ⊙ |E F| = |A*E B*F|
+|C D|   |G H|   |C*G D*H|
+```
+
+```elixir
+import Nx, only: :sigils
+
+mat1 = ~M"""
+1 2
+3 4
+"""
+
+mat2 = ~M"""
+5 6
+7 8
+"""
+
+Nx.multiply(mat1, mat2)
+```
+
+### ドット積（内積）
+
+```
+|A B| . |E F| = |A*E+B*G A*F+B*H|
+|C D|   |G H|   |C*E+D*G C*F+D*H|
+```
+
+```elixir
+import Nx, only: :sigils
+
+mat1 = ~M"""
+1 2
+3 4
+"""
+
+mat2 = ~M"""
+5 6
+7 8
+"""
+
+Nx.dot(mat1, mat2)
+```
+
+## ニューラルネットワークの計算
+
+![02](https://user-images.githubusercontent.com/7563926/212344094-d35cd222-37ca-424c-909d-d865c84a398a.png)
