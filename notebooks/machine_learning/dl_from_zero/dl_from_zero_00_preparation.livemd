@@ -1,0 +1,151 @@
+# ゼロから作る Deep Learning - 準備
+
+```elixir
+import IEx.Helpers
+
+Mix.install(
+  [
+    {:nx, "~> 0.4.0"},
+    {:exla, "~> 0.4.0"},
+    {:scidata, "~> 0.1"},
+    {:kino_vega_lite, "~> 0.1.7"}
+  ],
+  config: [nx: [default_backend: EXLA.Backend]]
+)
+```
+
+## 概要
+
+* [ゼロから作る Deep Learning ―Python で学ぶディープラーニングの理論と実装](https://www.oreilly.co.jp/books/9784873117584)の内容を Elixir で学ぶ
+
+## 資料
+
+* https://hexdocs.pm/nx
+* [Nx で始めるゼロから作る Deep Learning](https://qiita.com/the_haigo/items/1a2f0b371a3644960251) by the_haigo
+* [numpyとpyplotのコード翻訳 NxとVegaでどう書くの？](https://qiita.com/the_haigo/items/f0d0d49bb6834921e88f) by the_haigo
+* [Elixirでディープラーニング①：手書き文字識別（MNIST）をLivebook＋Axonで](https://qiita.com/piacerex/items/9cf4f328222103458167) by piacerex
+* [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+* [Elixirにて機械学習／ディープラーニングするためのライブラリ ＆ ツール](https://qiita.com/piacerex/items/c406e5737156b9fa114d) by piacerex
+
+## よく使う関数
+
+### transpose
+
+```elixir
+Nx.tensor([
+  [1, 2, 3],
+  [4, 5, 6]
+])
+|> Nx.transpose()
+```
+
+### argmax
+
+```elixir
+Nx.tensor([4, 5, 6]) |> Nx.argmax()
+```
+
+```elixir
+Nx.tensor(
+  [
+    [1, 2, 3],
+    [4, 5, 6]
+  ],
+  names: [:x, :y]
+)
+|> Nx.argmax(axis: :y)
+```
+
+### reshape
+
+```elixir
+Nx.tensor([
+  [1, 2, 3],
+  [4, 5, 6]
+])
+|> Nx.reshape({3, 2})
+```
+
+### negate
+
+```elixir
+Nx.tensor([1, 2, 3]) |> Nx.negate()
+```
+
+## グラフ描画
+
+### pyplot 代替品
+
+* [expyplot](https://hex.pm/packages/expyplot) - Python's matplotlib.pyplot ported to Elixir
+
+* [kino_vega_lite](https://hex.pm/packages/kino_vega_lite) - Vega-Lite integration with Livebook
+
+### numpy.arange 代替品
+
+* Nx では`arange`関数は未実装
+
+```elixir
+arange = fn start, stop, step ->
+  how_many = trunc((stop - start) / step)
+
+  Nx.iota({how_many})
+  |> Nx.multiply(step)
+  |> Nx.add(start)
+end
+```
+
+```elixir
+x = arange2.(0, 6, 0.1)
+y = Nx.sin(x)
+
+data_to_plot = %{
+  x: Nx.to_flat_list(x),
+  y: Nx.to_flat_list(y)
+}
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"point","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400)
+|> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
+|> VegaLite.mark(:point)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## データセットの読み込み
+
+### MNISTデータセットのダウンロード
+
+```elixir
+{datas_raw, labels_raw} = Scidata.MNIST.download()
+{data_bins, type, shape} = datas_raw
+
+# 60,000文字分の手書き文字画像のバイナリ
+<<_::binary>> = data_bins
+# 文字数、バイナリの次元数、横ピクセル数、縦ピクセル数
+{60000, 1, 28, 28} = shape
+
+datas =
+  data_bins
+  |> Nx.from_binary({:u, 8})
+  # 一文字分の手書き文字画像データは、784ピクセル（28 x 28）の1次元行列
+  |> Nx.reshape({60000, 28 * 28})
+  |> Nx.divide(255.0)
+  |> dbg()
+
+:ok
+```
+
+```elixir
+index = 6
+
+datas[index]
+# ヒートマップ表示できるよう、28x28の2次元行列に変形
+|> Nx.reshape({28, 28})
+|> Nx.to_heatmap()
+|> dbg()
+
+:ok
+```

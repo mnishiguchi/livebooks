@@ -10,9 +10,10 @@
 * [手書き文字識別（MNIST）](./mnist.livemd)
 * [タイタニック問題](./titanic.livemd)
 * [Evisionの基礎](./evision_basics.livemd)
+* [ゼロから作るDeep Learning](./dl_from_zero/index.livemd)
+* [Vegaの基礎](./vega_basics.livemd)
 
 ## 資料
 
 * [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc)
 * [Elixirにて機械学習／ディープラーニングするためのライブラリ ＆ ツール](https://qiita.com/piacerex/items/c406e5737156b9fa114d)
-* [ゼロから作る Deep LearningをElixirで学ぶシリーズ](https://qiita.com/Yoosuke/items/8599ed0a976de1371ead)

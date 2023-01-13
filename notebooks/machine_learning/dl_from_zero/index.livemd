@@ -1,0 +1,5 @@
+# ゼロから作る Deep Learning
+
+## もくじ
+
+* [00 preparation](./dl_from_zero_00_preparation.livemd)
