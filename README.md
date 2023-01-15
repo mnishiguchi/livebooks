@@ -6,12 +6,21 @@ My collection of [Livebooks](https://livebook.dev).
 
 ## Getting started
 
-```sh
-git clone https://github.com/mnishiguchi/livebooks.git
-cd livebooks
-bin/setup
+```bash
+git clone https://github.com/mnishiguchi/livebooks.git mnishiguchi_livebooks
+```
 
-# Run the Livebook server
+```bash
+cd mnishiguchi_livebooks
+```
+
+```bash
+bin/setup
+```
+
+## Start a Livebook server
+
+```bash
 bin/server
 ```
 
@@ -19,6 +28,14 @@ Visit http://localhost:8080/
 
 Secret cookie is `mnishiguchi`
 
-```
+## Start an interactive Elixir shell
+
+```bash
 bin/iex
+```
+
+## Update Livebook
+
+```bash
+bin/update
 ```

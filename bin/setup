@@ -1,22 +1,17 @@
 #!/bin/bash
 set -e
 
-current_dir=$(basename "$(pwd)")
+elixir --version
 
-if [ "$current_dir" == "livebooks" ]
-then
-  # Make this project available from the home dir
-  ln -sF "$(pwd)" "$HOME"/
-else
-  echo "Please go to \"livebooks\" project directory first"
-  exit 1
-fi
+mix local.hex --force
+mix local.rebar --force
 
-# Update the local copy of livebook source code
-git submodule update --remote --merge
+# Make a local copy of livebook as a submodule
+rm -fr livebook
+git submodule add -f https://github.com/livebook-dev/livebook ./livebook
 
 (
   cd ./livebook
 
-  mix deps.get
+  mix deps.update --all
 )
