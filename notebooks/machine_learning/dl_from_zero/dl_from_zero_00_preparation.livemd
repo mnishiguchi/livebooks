@@ -1,4 +1,4 @@
-# ゼロから作る Deep Learning - 準備
+# Deep Learning from zero - 準備
 
 ```elixir
 import IEx.Helpers

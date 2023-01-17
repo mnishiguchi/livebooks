@@ -3,3 +3,4 @@
 ## もくじ
 
 * [00 preparation](./dl_from_zero_00_preparation.livemd)
+* [03_neural_network](./dl_from_zero_03_neural_network.livemd)

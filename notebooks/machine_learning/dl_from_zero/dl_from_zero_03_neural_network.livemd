@@ -1,0 +1,241 @@
+# Deep Learning from zero - Neural network
+
+```elixir
+import IEx.Helpers
+
+Mix.install(
+  [
+    {:nx, "~> 0.4.0"},
+    {:exla, "~> 0.4.0"},
+    {:kino_vega_lite, "~> 0.1.7"}
+  ],
+  config: [nx: [default_backend: EXLA.Backend]]
+)
+```
+
+## 概要
+
+* [ゼロから作る Deep Learning ―Python で学ぶディープラーニングの理論と実装](https://www.oreilly.co.jp/books/9784873117584)の内容を Elixir で学ぶ
+
+## 資料
+
+* https://hexdocs.pm/nx
+* [Nxで始めるゼロから作るディープラーニング 3章 ニューラルネットワーク](https://qiita.com/the_haigo/items/bedd466142aaaf01641c) by the_haigo
+
+## 活性化関数
+
+> 古典的にはステップ関数が提案されたのだが、他にもいろいろと考えることはできるので、1986年のバックプロパゲーションの発表以降はシグモイド関数が最も一般的だったが、現在はReLU（ランプ関数）の方が良いと言われる。
+
+https://ja.wikipedia.org/wiki/活性化関数
+
+## ステップ関数（階段関数）
+
+* 0より上なら１それ以外は０となる
+* Nxで各要素に処理を行う場合はNx.mapを使用
+
+```elixir
+# WRONG!!!
+false = Nx.tensor(-1) < 0
+
+# https://hexdocs.pm/nx/Nx.html#greater/2
+# https://hexdocs.pm/nx/Nx.Defn.Kernel.html#%3E/2
+Nx.less(Nx.tensor(-1), 0)
+```
+
+```elixir
+# WRONG!!!
+true = Nx.tensor(-1) > 0
+
+# https://hexdocs.pm/nx/Nx.html#greater/2
+# https://hexdocs.pm/nx/Nx.Defn.Kernel.html#%3E/2
+Nx.greater(Nx.tensor(-1), 0)
+```
+
+```elixir
+arange = fn start, stop, step ->
+  how_many = trunc((stop - start) / step)
+
+  Nx.iota({how_many})
+  |> Nx.multiply(step)
+  |> Nx.add(start)
+end
+
+step_fun = fn tensor ->
+  Nx.map(tensor, &Nx.greater(&1, 0))
+end
+
+x = arange.(-5.0, 5.0, 0.1)
+y = step_fun.(x)
+
+# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
+data_to_plot = %{
+  x: Nx.to_flat_list(x),
+  y: Nx.to_flat_list(y)
+}
+```
+
+<!-- livebook:{"attrs":{"chart_title":"Step function","height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400, title: "Step function")
+|> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
+|> VegaLite.mark(:area)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## シグモイド関数
+
+```elixir
+arange = fn start, stop, step ->
+  how_many = trunc((stop - start) / step)
+
+  Nx.iota({how_many})
+  |> Nx.multiply(step)
+  |> Nx.add(start)
+end
+
+x = arange.(-5.0, 5.0, 0.1)
+y = Nx.sigmoid(x)
+
+# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
+data_to_plot = %{
+  x: Nx.to_flat_list(x),
+  y: Nx.to_flat_list(y)
+}
+```
+
+<!-- livebook:{"attrs":{"chart_title":"Sigmoid function","height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400, title: "Sigmoid function")
+|> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
+|> VegaLite.mark(:area)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## ReLU関数
+
+```elixir
+arange = fn start, stop, step ->
+  how_many = trunc((stop - start) / step)
+
+  Nx.iota({how_many})
+  |> Nx.multiply(step)
+  |> Nx.add(start)
+end
+
+relu_fun = fn tensor -> Nx.max(tensor, 0) end
+
+x = arange.(-5.0, 5.0, 0.1)
+y = relu_fun.(x)
+
+# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
+data_to_plot = %{
+  x: Nx.to_flat_list(x),
+  y: Nx.to_flat_list(y)
+}
+```
+
+<!-- livebook:{"attrs":{"chart_title":"ReLU activation function","height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400, title: "ReLU activation function")
+|> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
+|> VegaLite.mark(:area)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## ソフトマックス関数
+
+* ニューラルネットワークの最後の活性化関数としてよく用いられる
+* 各成分は区間`(0, 1)`に収まり、全ての成分の和が`1`になるため、確率として解釈できるようになる
+* https://ja.wikipedia.org/wiki/ソフトマックス関数
+
+```elixir
+softmax_fun = fn tensor ->
+  tensor =
+    tensor
+    |> Nx.add(
+      tensor
+      |> Nx.reduce_max()
+      |> Nx.negate()
+    )
+
+  tensor
+  |> Nx.exp()
+  |> Nx.divide(
+    tensor
+    |> Nx.exp()
+    |> Nx.sum()
+  )
+end
+
+arange = fn start, stop, step ->
+  how_many = trunc((stop - start) / step)
+
+  Nx.iota({how_many})
+  |> Nx.multiply(step)
+  |> Nx.add(start)
+end
+
+x = arange.(-5, 5, 0.1)
+y = softmax_fun.(x)
+
+# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
+data_to_plot = %{
+  x: Nx.to_flat_list(x),
+  y: Nx.to_flat_list(y)
+}
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400)
+|> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
+|> VegaLite.mark(:area)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## 3層ニューラルネットワーク
+
+```elixir
+defmodule ThreeLayerNetwork do
+  def init do
+    %{}
+    |> Map.put(:w1, Nx.tensor([[0.1, 0.3, 0.5], [0.2, 0.4, 0.6]]))
+    |> Map.put(:b1, Nx.tensor([[0.1, 0.2, 0.3]]))
+    |> Map.put(:w2, Nx.tensor([[0.1, 0.4], [0.2, 0.5], [0.3, 0.6]]))
+    |> Map.put(:b2, Nx.tensor([[0.1, 0.2]]))
+    |> Map.put(:w3, Nx.tensor([[0.1, 0.3], [0.2, 0.4]]))
+    |> Map.put(:b3, Nx.tensor([[0.1, 0.2]]))
+  end
+
+  def forward(x, network) do
+    [w1, w2, w3] = [network.w1, network.w2, network.w3]
+    [b1, b2, b3] = [network.b1, network.b2, network.b3]
+
+    x
+    |> Nx.dot(w1)
+    |> Nx.add(b1)
+    |> Nx.sigmoid()
+    |> Nx.dot(w2)
+    |> Nx.add(b2)
+    |> Nx.sigmoid()
+    |> Nx.dot(w3)
+    |> Nx.add(b3)
+    |> dbg()
+  end
+end
+
+network = ThreeLayerNetwork.init()
+
+Nx.tensor([1.0, 0.5])
+|> ThreeLayerNetwork.forward(network)
+
+:ok
+```
