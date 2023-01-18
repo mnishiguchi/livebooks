@@ -1,11 +1,17 @@
 # AxonのHello world
 
 ```elixir
-Mix.install([
-  {:nx, "~> 0.4.0"},
-  {:kino_vega_lite, "~> 0.1.0"},
-  {:axon, "~> 0.3.0"}
-])
+import IEx.Helpers
+
+Mix.install(
+  [
+    {:nx, "~> 0.4.0"},
+    {:exla, "~> 0.4.0"},
+    {:axon, "~> 0.3.0"},
+    {:kino_vega_lite, "~> 0.1.0"}
+  ],
+  config: [nx: [default_backend: EXLA.Backend]]
+)
 ```
 
 ## About
@@ -15,10 +21,11 @@ Mix.install([
 
 ## Resources
 
-* [Axonを使って線形回帰のパラメータ（傾きと切片）の値を求めてみよう](https://qiita.com/GeekMasahiro/items/a527eb12304ed75cc71f)
-* [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc)
+* [Livebookで試しなが作る、はじめてのAxonプログラム](https://qiita.com/GeekMasahiro/items/d956a7a880a937370a56) by GeekMasahiro
+* [Axonを使って線形回帰のパラメータ（傾きと切片）の値を求めてみよう](https://qiita.com/GeekMasahiro/items/a527eb12304ed75cc71f) by GeekMasahiro
+* [NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+* https://hexdocs.pm/axon
 * https://hexdocs.pm/axon/0.2.0/multi_input_example.html#everything-together
-* https://hexdocs.pm/axon/Axon.html
 
 ## 処理の流れ
 
@@ -26,65 +33,43 @@ Mix.install([
 * `train_model()`で、フィッティングする
 * 結果表示
 
-## 乱数を作る関数
-
-```elixir
-gen_random = fn n -> for _ <- 1..n, do: [:rand.uniform()] end
-```
-
-## y = 2 * x + 0.5 + 乱数
-
-```elixir
-x =
-  gen_random.(100)
-  |> Nx.tensor()
-  |> dbg()
-
-y =
-  Nx.multiply(x, 2)
-  |> Nx.add(0.5)
-  |> Nx.add(Nx.tensor(gen_random.(100)))
-  |> dbg()
-
-:ok
-```
-
 ## Everything together
 
 ```elixir
-defmodule HelloAxon do
+defmodule Main do
   require Axon
 
   ## Model 
 
   def build_model(input_shape) do
-    inp = Axon.input("x", shape: input_shape)
-
-    inp
+    # Axon.dense　は、input * kernel + bias の計算をする
+    Axon.input("x", shape: input_shape)
     |> Axon.dense(1)
   end
 
   ## Data 
 
-  def batch(n \\ 100) do
-    x = gen_random(n) |> Nx.tensor()
+  def build_batch(n \\ 100) do
+    x = generate_random(n)
+    y = generate_data(x, n)
 
-    f = fn x ->
-      Nx.multiply(x, 2)
-      |> Nx.add(0.5)
-      |> Nx.add(Nx.tensor(gen_random(n)))
-    end
-
-    {x, f.(x)}
+    {x, y}
   end
 
-  def gen_random(n) do
-    for _ <- 1..n, do: [:rand.uniform()]
+  def generate_data(x, n) do
+    # f(x) = 2 * x + 0.5 + 乱数
+    Nx.multiply(x, 2)
+    |> Nx.add(0.5)
+    |> Nx.add(generate_random(n))
+  end
+
+  def generate_random(n) do
+    Nx.tensor(for _ <- 1..n, do: [:rand.uniform()])
   end
 
   ## Training
 
-  def train_model(model, data, epochs) do
+  def train_model(model, data, epochs \\ 5) do
     model
     |> Axon.Loop.trainer(:mean_squared_error, :sgd)
     |> Axon.Loop.run(data, %{}, epochs: epochs, iterations: 1000)
@@ -92,45 +77,48 @@ defmodule HelloAxon do
 
   ## Evaluation of the model
 
-  def run do
+  def main do
+    # 学習データの準備
+    {x1, y1} = build_batch()
+    data = Stream.repeatedly(fn -> {x1, y1} end)
+
     model = build_model({nil})
-    data_xy = batch(100)
-    data = Stream.repeatedly(fn -> data_xy end)
 
-    model_state =
-      train_model(model, data, 10)
-      |> IO.inspect(label: "model_state")
+    # XとYの関係性を学習
+    model_state = train_model(model, data) |> dbg()
 
-    predicted_y =
-      Axon.predict(model, model_state, %{
-        "x" =>
-          Nx.tensor([[0, 1]])
-          |> Nx.transpose()
-      })
+    # 予測
+    x2 = Nx.tensor(for i <- 0..100, do: [i / 100])
+    y2 = Axon.predict(model, model_state, %{"x" => x2})
 
-    {data_xy, predicted_y}
+    {{x1, y1}, {x2, y2}}
   end
 end
-```
 
-## Get results
+{{x1, y1}, {x2, y2}} = Main.main()
 
-```elixir
-{{data_x, data_y}, predicted_y} = HelloAxon.run()
+:ok
 ```
 
 ## Visualize the results
 
 ```elixir
+data_to_plot = %{
+  x1: Nx.to_flat_list(x1),
+  y1: Nx.to_flat_list(y1),
+  x2: Nx.to_flat_list(x2),
+  y2: Nx.to_flat_list(y2)
+}
+
 VegaLite.new(width: 600, height: 600)
 |> VegaLite.layers([
   VegaLite.new()
-  |> VegaLite.data_from_values(x: data_x |> Nx.to_flat_list(), y: data_y |> Nx.to_flat_list())
+  |> VegaLite.data_from_values(x: data_to_plot.x1, y: data_to_plot.y1)
   |> VegaLite.mark(:point, tooltip: true)
   |> VegaLite.encode_field(:x, "x", type: :quantitative)
   |> VegaLite.encode_field(:y, "y", type: :quantitative),
   VegaLite.new()
-  |> VegaLite.data_from_values(x: [0, 1], y: Nx.to_flat_list(predicted_y))
+  |> VegaLite.data_from_values(x: data_to_plot.x2, y: data_to_plot.y2)
   |> VegaLite.mark(:line)
   |> VegaLite.encode_field(:x, "x", type: :quantitative)
   |> VegaLite.encode_field(:y, "y", type: :quantitative)
