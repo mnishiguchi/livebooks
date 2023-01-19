@@ -11,7 +11,7 @@
 * [闘魂Elixir ── Advent of Code 2022 (Day 8: Treetop Tree House) をElixirで楽しむ](https://qiita.com/torifukukaiou/items/cbede299eeda0111baf1) by torifukukaiou
 * https://adventofcode.com/2022/day/8
 
-## Answers
+## Prototype
 
 ```elixir
 input = """
@@ -136,4 +136,108 @@ possibly_hidden_points
 
 ```
 [{1, 3}, {2, 2}, {3, 1}, {3, 3}]
+```
+
+## Put everything together
+
+```elixir
+defmodule Treetop do
+  defstruct [:input, :hidden_points, :x_count, :y_count]
+
+  def new(input, x_count, y_count) do
+    %__MODULE__{
+      input: parse_input(input),
+      hidden_points: [],
+      x_count: x_count,
+      y_count: y_count
+    }
+  end
+
+  def call(data) do
+    hidden_points =
+      data
+      |> possibly_hidden_points()
+      |> Enum.filter(fn {x, y} -> hidden_point?(data, {x, y}) end)
+      |> length()
+
+    data.x_count * data.y_count - hidden_points
+  end
+
+  defp parse_input(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.with_index(fn row, i ->
+      row
+      |> String.split("", trim: true)
+      |> Enum.with_index(fn value, j ->
+        {{i, j}, value |> String.to_integer()}
+      end)
+    end)
+    |> List.flatten()
+    |> Map.new()
+  end
+
+  defp possibly_hidden_points(data) do
+    data.input
+    |> Enum.filter(fn
+      {{0, _}, _} -> false
+      {{_, 0}, _} -> false
+      {{x, _}, _} when x == data.x_count - 1 -> false
+      {{_, y}, _} when y == data.y_count - 1 -> false
+      {_point, _value} -> true
+    end)
+    |> Enum.map(fn {point, _} -> point end)
+  end
+
+  defp hidden_point?(data, {x, y}) do
+    current_value = data.input[{x, y}]
+
+    x_left_blocked =
+      (y - 1)..0
+      |> Enum.reduce_while(nil, fn i, _acc ->
+        hidden = data.input[{x, i}] >= current_value
+        if hidden, do: {:halt, true}, else: {:cont, false}
+      end)
+
+    x_right_blocked =
+      (y + 1)..4
+      |> Enum.reduce_while(nil, fn i, _acc ->
+        hidden = data.input[{x, i}] >= current_value
+        if hidden, do: {:halt, true}, else: {:cont, false}
+      end)
+
+    y_left_blocked =
+      (x - 1)..0
+      |> Enum.reduce_while(nil, fn i, _acc ->
+        blocked = data.input[{i, y}] >= current_value
+        if blocked, do: {:halt, true}, else: {:cont, false}
+      end)
+
+    y_right_blocked =
+      (x + 1)..4
+      |> Enum.reduce_while(nil, fn i, _acc ->
+        blocked = data.input[{i, y}] >= current_value
+        if blocked, do: {:halt, true}, else: {:cont, false}
+      end)
+
+    x_left_blocked and x_right_blocked and
+      y_left_blocked and y_right_blocked
+  end
+end
+
+"""
+30373
+25512
+65332
+33549
+35390
+"""
+|> Treetop.new(5, 5)
+|> Treetop.call()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+21
 ```
