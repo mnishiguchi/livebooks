@@ -1,16 +1,5 @@
 #!/bin/bash
 set -e
 
-elixir --version
-
-mix local.hex --force
-mix local.rebar --force
-
-# Update the local copy of livebook source code
-git submodule update --remote --merge
-
-(
-  cd ./livebook
-
-  mix deps.update --all
-)
+# Simply set it up again
+./bin/setup
