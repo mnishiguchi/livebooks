@@ -20,7 +20,29 @@ Mix.install(
 ## 資料
 
 * https://hexdocs.pm/nx
-* [Nxで始めるゼロから作るディープラーニング 3章 ニューラルネットワーク](https://qiita.com/the_haigo/items/bedd466142aaaf01641c) by the_haigo
+* [Nxで始めるゼロ作DL 3章 ニューラルネットワーク](https://qiita.com/the_haigo/items/bedd466142aaaf01641c) by the_haigo
+* [ゼロ作DLをElixirで学ぶ 3章 ニューラルネットワーク](https://qiita.com/Yoosuke/items/e69373b5d619e4a7b027) by Yoosuke
+
+## ニューラルネットワーク
+
+* 入力層、中間層、出力層から構成される
+* 層と層の間の重みは、ニューロン同士のつながりの強さを示す
+* 分類問題と回帰問題の両方に用いることができる
+
+### 分類問題
+
+* 入力データから何かを分類する問題
+* NNの出力層の活性化関数をソフトマックス関数にする
+
+### 回帰問題
+
+* 入力データから連続的数値を予測する問題
+* NNの出力層の活性化関数を恒等関数にする
+
+## 出力層のニューロンの数
+
+* 出力層のニューロンの数は解くべき問題に応じて決める
+* 分類を行う問題では、出力層のニューロンの数は分類したいクラスの数に設定する
 
 ## 活性化関数
 
@@ -28,10 +50,7 @@ Mix.install(
 
 https://ja.wikipedia.org/wiki/活性化関数
 
-## ステップ関数（階段関数）
-
-* 0より上なら１それ以外は０となる
-* Nxで各要素に処理を行う場合はNx.mapを使用
+## Nx.tensorの比較
 
 ```elixir
 # WRONG!!!
@@ -51,6 +70,8 @@ true = Nx.tensor(-1) > 0
 Nx.greater(Nx.tensor(-1), 0)
 ```
 
+## 等差数列
+
 ```elixir
 arange = fn start, stop, step ->
   how_many = trunc((stop - start) / step)
@@ -60,6 +81,15 @@ arange = fn start, stop, step ->
   |> Nx.add(start)
 end
 
+arange.(-3, 3, 0.5)
+```
+
+## ステップ関数（階段関数）
+
+* 0より上なら１それ以外は０となる
+* Nxで各要素に処理を行う場合はNx.mapを使用
+
+```elixir
 step_fun = fn tensor ->
   Nx.map(tensor, &Nx.greater(&1, 0))
 end
@@ -67,19 +97,18 @@ end
 x = arange.(-5.0, 5.0, 0.1)
 y = step_fun.(x)
 
-# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
 data_to_plot = %{
   x: Nx.to_flat_list(x),
   y: Nx.to_flat_list(y)
 }
 ```
 
-<!-- livebook:{"attrs":{"chart_title":"Step function","height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":{"chart_title":"Step function","height":400,"layers":[{"chart_type":"line","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 VegaLite.new(width: 600, height: 400, title: "Step function")
 |> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
-|> VegaLite.mark(:area)
+|> VegaLite.mark(:line)
 |> VegaLite.encode_field(:x, "x", type: :quantitative)
 |> VegaLite.encode_field(:y, "y", type: :quantitative)
 ```
@@ -87,30 +116,21 @@ VegaLite.new(width: 600, height: 400, title: "Step function")
 ## シグモイド関数
 
 ```elixir
-arange = fn start, stop, step ->
-  how_many = trunc((stop - start) / step)
-
-  Nx.iota({how_many})
-  |> Nx.multiply(step)
-  |> Nx.add(start)
-end
-
 x = arange.(-5.0, 5.0, 0.1)
 y = Nx.sigmoid(x)
 
-# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
 data_to_plot = %{
   x: Nx.to_flat_list(x),
   y: Nx.to_flat_list(y)
 }
 ```
 
-<!-- livebook:{"attrs":{"chart_title":"Sigmoid function","height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":{"chart_title":"Sigmoid function","height":400,"layers":[{"chart_type":"line","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 VegaLite.new(width: 600, height: 400, title: "Sigmoid function")
 |> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
-|> VegaLite.mark(:area)
+|> VegaLite.mark(:line)
 |> VegaLite.encode_field(:x, "x", type: :quantitative)
 |> VegaLite.encode_field(:y, "y", type: :quantitative)
 ```
@@ -118,32 +138,23 @@ VegaLite.new(width: 600, height: 400, title: "Sigmoid function")
 ## ReLU関数
 
 ```elixir
-arange = fn start, stop, step ->
-  how_many = trunc((stop - start) / step)
-
-  Nx.iota({how_many})
-  |> Nx.multiply(step)
-  |> Nx.add(start)
-end
-
 relu_fun = fn tensor -> Nx.max(tensor, 0) end
 
 x = arange.(-5.0, 5.0, 0.1)
 y = relu_fun.(x)
 
-# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
 data_to_plot = %{
   x: Nx.to_flat_list(x),
   y: Nx.to_flat_list(y)
 }
 ```
 
-<!-- livebook:{"attrs":{"chart_title":"ReLU activation function","height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":{"chart_title":"ReLU activation function","height":400,"layers":[{"chart_type":"line","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 VegaLite.new(width: 600, height: 400, title: "ReLU activation function")
 |> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
-|> VegaLite.mark(:area)
+|> VegaLite.mark(:line)
 |> VegaLite.encode_field(:x, "x", type: :quantitative)
 |> VegaLite.encode_field(:y, "y", type: :quantitative)
 ```
@@ -155,69 +166,104 @@ VegaLite.new(width: 600, height: 400, title: "ReLU activation function")
 * https://ja.wikipedia.org/wiki/ソフトマックス関数
 
 ```elixir
-softmax_fun = fn tensor ->
-  tensor =
-    tensor
-    |> Nx.add(
-      tensor
-      |> Nx.reduce_max()
-      |> Nx.negate()
-    )
-
-  tensor
-  |> Nx.exp()
-  |> Nx.divide(
-    tensor
-    |> Nx.exp()
-    |> Nx.sum()
-  )
-end
-
-arange = fn start, stop, step ->
-  how_many = trunc((stop - start) / step)
-
-  Nx.iota({how_many})
-  |> Nx.multiply(step)
-  |> Nx.add(start)
+softmax_fun = fn x ->
+  a = Nx.tensor(x)
+  c = a |> Nx.flatten() |> Nx.to_flat_list() |> Enum.max()
+  e = Nx.subtract(a, c) |> Nx.exp()
+  Nx.divide(e, Nx.sum(e))
 end
 
 x = arange.(-5, 5, 0.1)
 y = softmax_fun.(x)
 
-# Nx.tensorのままでは描画できないためNx.to_flat_listでListに変換
+data_to_plot = %{
+  x: Nx.to_flat_list(x),
+  y: Nx.to_flat_list(y)
+}
+
+[0.3, 2.9, 4.0] |> softmax_fun.() |> Nx.sum() |> dbg()
+
+:ok
+```
+
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"line","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 600, height: 400)
+|> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
+|> VegaLite.mark(:line)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## 恒等関数
+
+* 入力した値に等しい値を返す関数
+
+```elixir
+identity_fun = fn x -> x end
+
+x = arange.(-5, 5, 0.1)
+y = identity_fun.(x)
+
 data_to_plot = %{
   x: Nx.to_flat_list(x),
   y: Nx.to_flat_list(y)
 }
 ```
 
-<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"area","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":{"chart_title":null,"height":400,"layers":[{"chart_type":"line","color_field":null,"color_field_aggregate":null,"color_field_bin":false,"color_field_scale_scheme":null,"color_field_type":null,"data_variable":"data_to_plot","x_field":"x","x_field_aggregate":null,"x_field_bin":false,"x_field_scale_type":null,"x_field_type":"quantitative","y_field":"y","y_field_aggregate":null,"y_field_bin":false,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":600},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 VegaLite.new(width: 600, height: 400)
 |> VegaLite.data_from_values(data_to_plot, only: ["x", "y"])
-|> VegaLite.mark(:area)
+|> VegaLite.mark(:line)
 |> VegaLite.encode_field(:x, "x", type: :quantitative)
 |> VegaLite.encode_field(:y, "y", type: :quantitative)
 ```
 
-## 3層ニューラルネットワーク
+## 3層ニューラルネットワークの各層における信号伝達
+
+* `x`は入力、`w`は重み、`b`はバイアス
 
 ```elixir
 defmodule ThreeLayerNetwork do
   def init do
-    %{}
-    |> Map.put(:w1, Nx.tensor([[0.1, 0.3, 0.5], [0.2, 0.4, 0.6]]))
-    |> Map.put(:b1, Nx.tensor([[0.1, 0.2, 0.3]]))
-    |> Map.put(:w2, Nx.tensor([[0.1, 0.4], [0.2, 0.5], [0.3, 0.6]]))
-    |> Map.put(:b2, Nx.tensor([[0.1, 0.2]]))
-    |> Map.put(:w3, Nx.tensor([[0.1, 0.3], [0.2, 0.4]]))
-    |> Map.put(:b3, Nx.tensor([[0.1, 0.2]]))
+    %{
+      w1:
+        Nx.tensor([
+          [0.1, 0.3, 0.5],
+          [0.2, 0.4, 0.6]
+        ]),
+      b1:
+        Nx.tensor([
+          [0.1, 0.2, 0.3]
+        ]),
+      w2:
+        Nx.tensor([
+          [0.1, 0.4],
+          [0.2, 0.5],
+          [0.3, 0.6]
+        ]),
+      b2:
+        Nx.tensor([
+          [0.1, 0.2]
+        ]),
+      w3:
+        Nx.tensor([
+          [0.1, 0.3],
+          [0.2, 0.4]
+        ]),
+      b3:
+        Nx.tensor([
+          [0.1, 0.2]
+        ])
+    }
   end
 
-  def forward(x, network) do
-    [w1, w2, w3] = [network.w1, network.w2, network.w3]
-    [b1, b2, b3] = [network.b1, network.b2, network.b3]
+  def forward(network, x) do
+    {w1, w2, w3} = {network.w1, network.w2, network.w3}
+    {b1, b2, b3} = {network.b1, network.b2, network.b3}
 
     x
     |> Nx.dot(w1)
@@ -232,10 +278,8 @@ defmodule ThreeLayerNetwork do
   end
 end
 
-network = ThreeLayerNetwork.init()
-
-Nx.tensor([1.0, 0.5])
-|> ThreeLayerNetwork.forward(network)
+x = Nx.tensor([1.0, 0.5])
+y = ThreeLayerNetwork.init() |> ThreeLayerNetwork.forward(x)
 
 :ok
 ```
