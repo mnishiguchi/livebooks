@@ -1,0 +1,139 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 闘魂Elixir ── Treetop Tree House
+
+```elixir
+# Mix.install([{:benchee, "~> 1.1"}])
+```
+
+## About
+
+* [闘魂Elixir ── Advent of Code 2022 (Day 8: Treetop Tree House) をElixirで楽しむ](https://qiita.com/torifukukaiou/items/cbede299eeda0111baf1) by torifukukaiou
+* https://adventofcode.com/2022/day/8
+
+## Answers
+
+```elixir
+input = """
+30373
+25512
+65332
+33549
+35390
+"""
+
+parse_input = fn input ->
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.with_index(fn row, i ->
+    row
+    |> String.split("", trim: true)
+    |> Enum.with_index(fn value, j ->
+      {{i, j}, value |> String.to_integer()}
+    end)
+  end)
+  |> List.flatten()
+  |> Map.new()
+end
+
+value_lookup = parse_input.(input)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%{
+  {0, 0} => 3,
+  {0, 1} => 0,
+  {0, 2} => 3,
+  {0, 3} => 7,
+  {0, 4} => 3,
+  {1, 0} => 2,
+  {1, 1} => 5,
+  {1, 2} => 5,
+  {1, 3} => 1,
+  {1, 4} => 2,
+  {2, 0} => 6,
+  {2, 1} => 5,
+  {2, 2} => 3,
+  {2, 3} => 3,
+  {2, 4} => 2,
+  {3, 0} => 3,
+  {3, 1} => 3,
+  {3, 2} => 5,
+  {3, 3} => 4,
+  {3, 4} => 9,
+  {4, 0} => 3,
+  {4, 1} => 5,
+  {4, 2} => 3,
+  {4, 3} => 9,
+  {4, 4} => 0
+}
+```
+
+```elixir
+{x_count, y_count} = {5, 5}
+
+possibly_hidden_points =
+  value_lookup
+  |> Enum.filter(fn
+    {{0, _}, _} -> false
+    {{_, 0}, _} -> false
+    {{x, _}, _} when x == x_count - 1 -> false
+    {{_, y}, _} when y == y_count - 1 -> false
+    {_point, _value} -> true
+  end)
+  |> Enum.map(fn {point, _} -> point end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[{1, 1}, {1, 2}, {1, 3}, {2, 1}, {2, 2}, {2, 3}, {3, 1}, {3, 2}, {3, 3}]
+```
+
+```elixir
+hidden = fn {x, y} ->
+  current_value = value_lookup[{x, y}]
+
+  x_left_blocked =
+    (y - 1)..0
+    |> Enum.reduce_while(nil, fn i, _acc ->
+      hidden = value_lookup[{x, i}] >= current_value
+      if hidden, do: {:halt, true}, else: {:cont, false}
+    end)
+
+  x_right_blocked =
+    (y + 1)..4
+    |> Enum.reduce_while(nil, fn i, _acc ->
+      hidden = value_lookup[{x, i}] >= current_value
+      if hidden, do: {:halt, true}, else: {:cont, false}
+    end)
+
+  y_left_blocked =
+    (x - 1)..0
+    |> Enum.reduce_while(nil, fn i, _acc ->
+      blocked = value_lookup[{i, y}] >= current_value
+      if blocked, do: {:halt, true}, else: {:cont, false}
+    end)
+
+  y_right_blocked =
+    (x + 1)..4
+    |> Enum.reduce_while(nil, fn i, _acc ->
+      blocked = value_lookup[{i, y}] >= current_value
+      if blocked, do: {:halt, true}, else: {:cont, false}
+    end)
+
+  x_left_blocked and x_right_blocked and
+    y_left_blocked and y_right_blocked
+end
+
+possibly_hidden_points
+|> Enum.filter(fn {x, y} -> hidden.({x, y}) end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[{1, 3}, {2, 2}, {3, 1}, {3, 3}]
+```
