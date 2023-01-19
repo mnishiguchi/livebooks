@@ -19,7 +19,7 @@ Mix.install([{:amqp, "~> 3.0"}])
 * https://github.com/rabbitmq/rabbitmq-tutorials/blob/main/elixir
 
 ## Topic exchange
-å
+
 * The logic behind the topic exchange is similar to a topic one, but it can support multiple criteria
 
 ### routing key
