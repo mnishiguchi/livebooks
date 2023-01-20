@@ -2,16 +2,6 @@
 
 # 闘魂Elixir ── Treetop Tree House
 
-```elixir
-# Mix.install([{:benchee, "~> 1.1"}])
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-nil
-```
-
 ## About
 
 * [闘魂Elixir ── Advent of Code 2022 (Day 8: Treetop Tree House) をElixirで楽しむ](https://qiita.com/torifukukaiou/items/cbede299eeda0111baf1) by torifukukaiou
@@ -148,12 +138,11 @@ possibly_hidden_points
 
 ```elixir
 defmodule Treetop do
-  defstruct [:input, :hidden_points, :x_count, :y_count]
+  defstruct [:input, :x_count, :y_count]
 
   def new(input, x_count, y_count) do
     %__MODULE__{
       input: parse_input(input),
-      hidden_points: [],
       x_count: x_count,
       y_count: y_count
     }
