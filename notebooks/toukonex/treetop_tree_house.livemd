@@ -23,10 +23,8 @@ parse_input = fn input ->
   |> String.split("\n", trim: true)
   |> Enum.with_index(fn row, i ->
     row
-    |> String.split("", trim: true)
-    |> Enum.with_index(fn value, j ->
-      {{i, j}, value |> String.to_integer()}
-    end)
+    |> String.to_charlist()
+    |> Enum.with_index(fn value, j -> {{i, j}, value - ?0} end)
   end)
   |> List.flatten()
   |> Map.new()
@@ -120,8 +118,7 @@ hidden = fn {x, y} ->
       if blocked, do: {:halt, true}, else: {:cont, false}
     end)
 
-  x_left_blocked and x_right_blocked and
-    y_left_blocked and y_right_blocked
+  x_left_blocked and x_right_blocked and y_left_blocked and y_right_blocked
 end
 
 possibly_hidden_points
@@ -138,10 +135,8 @@ possibly_hidden_points
 
 ```elixir
 defmodule Treetop do
-  defstruct [:input, :x_count, :y_count]
-
   def new(input, x_count, y_count) do
-    %__MODULE__{
+    %{
       input: parse_input(input),
       x_count: x_count,
       y_count: y_count
@@ -152,7 +147,7 @@ defmodule Treetop do
     hidden_points =
       data
       |> possibly_hidden_points()
-      |> Enum.filter(fn {x, y} -> hidden_point?(data, {x, y}) end)
+      |> Enum.filter(&hidden_point?(data, &1))
       |> length()
 
     data.x_count * data.y_count - hidden_points
@@ -163,10 +158,8 @@ defmodule Treetop do
     |> String.split("\n", trim: true)
     |> Enum.with_index(fn row, i ->
       row
-      |> String.split("", trim: true)
-      |> Enum.with_index(fn value, j ->
-        {{i, j}, value |> String.to_integer()}
-      end)
+      |> String.to_charlist()
+      |> Enum.with_index(fn value, j -> {{i, j}, value - ?0} end)
     end)
     |> List.flatten()
     |> Map.new()
@@ -215,8 +208,7 @@ defmodule Treetop do
         if blocked, do: {:halt, true}, else: {:cont, false}
       end)
 
-    x_left_blocked and x_right_blocked and
-      y_left_blocked and y_right_blocked
+    x_left_blocked and x_right_blocked and y_left_blocked and y_right_blocked
   end
 end
 
