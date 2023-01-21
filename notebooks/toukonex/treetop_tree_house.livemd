@@ -66,6 +66,20 @@ value_lookup = parse_input.(input)
 ```
 
 ```elixir
+value_lookup
+|> Map.keys()
+|> Enum.reduce({0, 0}, fn {x, y}, {max_x, max_y} ->
+  {Enum.max([x, max_x]), Enum.max([y, max_y])}
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{4, 4}
+```
+
+```elixir
 {x_count, y_count} = {5, 5}
 
 possibly_hidden_points =
@@ -135,11 +149,20 @@ possibly_hidden_points
 
 ```elixir
 defmodule Treetop do
-  def new(input, x_count, y_count) do
+  def new(input) do
+    parsed_input = parse_input(input)
+
+    {x_last_index, y_last_index} =
+      parsed_input
+      |> Map.keys()
+      |> Enum.reduce({0, 0}, fn {x, y}, {max_x, max_y} ->
+        {Enum.max([x, max_x]), Enum.max([y, max_y])}
+      end)
+
     %{
-      input: parse_input(input),
-      x_count: x_count,
-      y_count: y_count
+      input: parsed_input,
+      x_count: x_last_index + 1,
+      y_count: y_last_index + 1
     }
   end
 
@@ -313,7 +336,7 @@ end
 221120341111243124154321401255010441026151433422443520262166251632146441120442553301443334201231200
 021222222103332103301112520131442023663055232552042262505152050120510455441325453404132240001402111
 """
-|> Treetop.new(99, 99)
+|> Treetop.new()
 |> Treetop.call()
 ```
 
