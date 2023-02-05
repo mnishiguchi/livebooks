@@ -1,0 +1,186 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 闘魂Elixir ── Rope bridge
+
+## About
+
+* [闘魂Elixir ── Advent of Code 2022 (Day 9: Rope Bridge) をElixirで楽しむ！](https://qiita.com/torifukukaiou/items/4f7f5aaafa0de517b1bd) by torifukukaiou
+* https://adventofcode.com/2022/day/9
+
+## Do it
+
+```elixir
+File.cwd!()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"/Users/mnishiguchi/src/livebooks/livebook"
+```
+
+```elixir
+input1 = File.read!("../notebooks/toukonex/rope_bridge/input1.txt")
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"R 4\nU 4\nL 3\nD 1\nR 4\nD 1\nL 5\nR 2\n"
+```
+
+```elixir
+input2 = File.read!("../notebooks/toukonex/rope_bridge/input2.txt")
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"R 2\nU 2\nL 2\nU 1\nL 1\nU 1\nR 1\nL 2\nU 2\nR 1\nD 2\nU 2\nR 1\nD 1\nL 1\nR 1\nL 2\nU 2\nL 2\nD 1\nR 1\nU 2\nL 2\nU 2\nR 1\nD 1\nL 2\nU 2\nR 2\nL 2\nU 2\nR 2\nL 1\nU 2\nR 2\nD 1\nL 1\nR 2\nU 1\nR 2\nD 2\nL 1\nR 1\nU 1\nR 2\nL 1\nU 1\nR 1\nL 2\nD 2\nR 2\nD 1\nL 2\nR 2\nL 1\nR 2\nD 1\nR 2\nD 2\nL 1\nR 1\nU 2\nL 2\nR 2\nD 1\nR 2\nU 2\nL 1\nD 2\nR 2\nL 2\nD 2\nU 1\nR 2\nU 2\nR 2\nD 2\nR 1\nU 2\nD 2\nR 1\nL 1\nR 1\nU 2\nD 2\nR 1\nU 1\nR 1\nL 1\nU 2\nL 2\nD 2\nU 2\nD 2\nR 2\nD 2\nL 1\nU 2\nL 1\nR 1\nD 2\nL 1\nU 1\nD 2\nU 2\nD 2\nR 2\nU 1\nR 1\nU 2\nD 1\nR 2\nD 2\nL 3\nU 1\nD 2\nU 3\nR 3\nL 1\nD 2\nR 1\nD 3\nL 3\nR 1\nD 3\nL 3\nD 1\nR 3\nD 1\nL 1\nD 2\nR 3\nD 1\nU 2\nR 2\nL 1\nD 1\nR 3\nU 2\nL 3\nU 2\nD 2\nR 2\nD 3\nU 1\nD 3\nL 3\nR 2\nL 2\nD 3\nL 2\nU 3\nR 2\nD 1\nR 2\nU 3\nR 3\nU 3\nL 1\nR 3\nD 2\nR 1\nL 3\nR 1\nD 3\nL 3\nD 1\nU 2\nR 3\nU 3\nD 1\nL 2\nR 3\nL 1\nD 2\nL 3\nD 1\nL 3\nD 1\nU 2\nD 3\nR 2\nU 1\nL 3\nR 3\nL 2\nR 1\nL 2\nD 2\nR 3\nU 3\nR 3\nD 2\nU 3\nD 2\nR 3\nD 3\nR 2\nU 1\nL 3\nU 2\nR 2\nL 2\nU 1\nL 3\nD 2\nU 2\nR 1\nL 2\nD 2\nU 3\nR 2\nD 2\nL 3\nU 1\nL 1\nU 2\nR 2\nU 1\nD 2\nU 2\nR 3\nL 1\nU 1\nD 3\nU 4\nL 3\nD 2\nL 3\nU 4\nD 2\nR 4\nL 4\nU 2\nD 3\nU 2\nD 3\nL 3\nU 2\nD 3\nL 1\nU 1\nR 1\nL 4\nR 3\nD 3\nL 2\nU 3\nR 2\nL 1\nU 4\nD 3\nU 1\nL 2\nD 4\nL 1\nR 3\nD 4\nR 1\nL 1\nU 3\nL 3\nD 3\nR 3\nU 1\nL 4\nU 3\nR 3\nL 3\nU 2\nR 3\nL 3\nR 1\nD 3\nR 3\nL 4\nR 3\nD 4\nL 3\nU 2\nR 4\nL 1\nU 1\nR 4\nD 3\nU 1\nR 1\nD 1\nU 3\nR 2\nL 1\nD 1\nL 3\nD 4\nR 4\nU 4\nD 1\nR 3\nD 3\nR 3\nL 4\nR 4\nL 2\nR 2\nD 3\nR 4\nD 2\nU 4\nL 3\nD 1\nR 2\nU 2\nR 3\nD 1\nR 3\nD 1\nL 1\nU 4\nL 2\nU 4\nL 4\nU 3\nR 4\nL 3\nR 3\nL 4\nU 4\nR 4\nD 2\nR 2\nD 3\nU 4\nD 1\nU 1\nD 5\nU 3\nD 5\nU 5\nD 3\nL 3\nU 3\nD 3\nR 1\nD 3\nR 4\nU 4\nD 1\nR 5\nD 5\nR 2\nU 5\nL 2\nU 2\nD 2\nU 4\nR 1\nD 1\nL 2\nR 2\nD 1\nL 5\nR 5\nD 4\nR 5\nL 1\nD 2\nL 3\nU 2\nD 3\nL 1\nR 5\nU 3\nR 1\nD 3\nR 1\nU 1\nR 3\nU 2\nD 5\nL 5\nR 1\nU 3\nL 4\nD 2\nR 1\nD 3\nU 4\nR 3\nL 4\nU 2\nD 3\nU 1\nR 5\nD 3\nL 2\nU 3\nL 5\nU 3\nL 3\nD 5\nL 5\nU 3\nR 2\nD 5\nU 4\nL 5\nU 1\nD 5\nR 3\nD 1\nL 5\nR 2\nD 2\nU 5\nR 1\nD 2\nL 3\nD 2\nL 5\nD 2\nU 5\nL 2\nR 3\nL 3\nD 3\nU 2\nR 5\nL 1\nU 5\nR 5\nL 2\nD 5\nR 3\nL 2\nU 2\nD 3\nR 4\nL 1\nR 3\nD 5\nR 3\nD 4\nR 2\nD 5\nR 3\nL 3\nR 2\nU 2\nL 1\nR 6\nU 6\nL 6\nU 2\nR 6\nD 4\nU 1\nL 1\nR 1\nD 1\nL 6\nD 6\nU 4\nL 6\nD 3\nR 1\nU 1\nD 3\nR 3\nD 5\nU 1\nL 2\nR 6\nU 5\nD 6\nL 6\nR 2\nU 1\nD 1\nL 4\nD 5\nL 6\nU 1\nL 6\nR 5\nU 5\nD 3\nL 5\nR 2\nU 3\nD 1\nL 2\nU 2\nD 1\nL 5\nD 1\nU 5\nR 4\nL 2\nR 5\nD 3\nU 3\nR 2\nU 3\nD 6\nL 5\nR 1\nU 5\nL 1\nR 6\nD 6\nR 6\nL 1\nD 2\nR 5\nL 4\nD 3\nL 5\nR 4\nL 6\nU 1\nL 2\nU 3\nR 4\nD 3\nR 3\nL 1\nD 4\nL 2\nR 5\nD 2\nR 2\nD 5\nU 2\nL 4\nR 4\nU 4\nR 1\nD 3\nL 6\nU 5\nL 5\nD 6\nU 3\nD 6\nR 6\nD 3\nU 6\nL 6\nD 3\nL 6\nR 3\nD 2\nL 4\nD 5\nL 5\nD 2\nL 6\nR 1\nD 1\nL 4\nU 6\nR 1\nL 5\nD 7\nU 2\nR 6\nD 7\nL 2\nR 3\nU 1\nL 3\nR 2\nU 7\nD 7\nU 7\nD 4\nR 2\nL 7\nR 7\nL 5\nR 4\nU 5\nL 5\nU 6\nR 2\nD 3\nL 2\nU 6\nD 5\nR 2\nD 2\nR 5\nU 7\nR 3\nD 1\nL 5\nR 1\nU 3\nD 6\nU 6\nL 7\nU 4\nL 6\nD 1\nL 7\nU 4\nD 7\nL 1\nD 6\nL 2\nR 5\nL 7\nU 3\nD 2\nR 7\nL 2\nU 6\nL 3\nU 6\nL 5\nR 2\nL 7\nD 3\nL 7\nR 1\nL 1\nR 5\nD 6\nL 2\nD 5\nL 4\nD 3\nU 5\nD 1\nR 4\nU 1\nL 2\nR 3\nU 7\nD 6\nU 2\nD 4\nU 5\nD 5\nU 7\nR 2\nD 1\nU 2\nL 2\nU 3\nD 1\nR 4\nD 1\nR 3\nU 1\nR 7\nD 4\nR 3\nD 2\nL 2\nU 4\nL 2\nU 6\nL 4\nD 6\nU 3\nL 1\nU 4\nR 7\nD 6\nL 2\nD 7\nR 4\nU 5\nR 4\nD 5\nR 6\nD 4\nR 4\nU 2\nR 3\nL 7\nR 8\nD 8\nR 5\nU 2\nD 6\nL 2\nR 4\nU 3\nL 1\nR 2\nD 5\nL 1\nD 5\nL 5\nU 1\nR 8\nD 1\nU 1\nL 1\nR 8\nL 3\nR 6\nL 1\nU 3\nR 6\nL 5\nU 2\nL 8\nR 4\nU 4\nR 6\nU 5\nR 1\nL 2\nR 5\nD 1\nU 4\nL 3\nU 3\nR 1\nU 3\nR 8\nL 1\nU 2\nL 7\nD 6\nL 6\nR 4\nD 2\nR 2\nL 8\nD 4\nR 4\nU 4\nL 6\nD 3\nR 7\nD 8\nU 4\nR 4\nU 2\nL 8\nD 5\nL 4\nU 7\nD 8\nU 6\nR 6\nL 5\nD 5\nL 2\nD 1\nR 1\nD 4\nR 5\nL 7\nD 8\nU 2\nD 3\nL 5\nR 4\nL 7\nR 3\nL 1\nD 8\nR 5\nL 8\nR 8\nD 1\nR 4\nD 1\nL 2\nD 5\nL 7\nU 1\nL 4\nR 5\nL 3\nR 9\nD 9\nL 4\nR 6\nL 6\nR 1\nL 3\nR 5\nD 8\nL 1\nU 2\nR 8\nU 7\nD 6\nL 8\nD 1\nL 9\nD 5\nL 1\nD 6\nL 8\nR 2\nL 6\nR 4\nU 1\nR 6\nL 5\nR 5\nL 6\nR 8\nD 5\nL 4\nR 2\nL 7\nR 2\nU 9\nL 6\nR 2\nU 7\nD 4\nU 2\nL 2\nU 8\nR 8\nU 3\nR 6\nD 6\nL 2\nD 4\nL 4\nR 2\nL 1\nU 8\nD 2\nR 2\nL 1\nR 7\nL 8\nD 8\nL 4\nU 4\nR 5\nU 1\nD 8\nL 8\nR 9\nD 6\nL 1\nD 5\nL 9\nU 6\nD 6\nU 3\nD 5\nR 5\nU 9\nL 2\nR 5\nU 9\nL 1\nD 4\nU 4\nL 5\nD 6\nR 3\nL 6\nU 3\nR 4\nU 5\nL 5\nD 8\nL 6\nU 4\nD 1\nU 7\nD 2\nL 3\nR 7\nU 1\nR 4\nU 4\nR 9\nU 3\nD 2\nL 6\nR 9\nU 3\nL 8\nR 10\nU 3\nR 8\nD 8\nL 1\nU 4\nR 5\nU 8\nD 10\nU 10\nL 7\nD 5\nL 2\nR 7\nL 1\nU 10\nR 1\nD 1\nL 5\nR 7\nU 6\nL 3\nR 7\nU 4\nR 3\nU 3\nR 4\nU 8\nL 8\nD 6\nL 5\nU 10\nL 9\nR 3\nU 10\nD 9\nU 5\nD 10\nU 7\nD 6\nU 9\nL 8\nU 3\nD 6\nR 9\nU 9\nD 4\nR 8\nU 7\nR 6\nU 5\nR 5\nU 3\nD 4\nR 9\nL 7\nD 7\nU 1\nL 3\nR 4\nD 8\nL 4\nD 6\nU 1\nR 7\nD 4\nL 9\nD 2\nR 4\nU 10\nD 5\nU 6\nD 6\nR 5\nU 6\nD 6\nL 7\nU 4\nD 1\nL 6\nR 8\nL 7\nU 8\nL 2\nR 6\nL 9\nD 2\nU 9\nD 5\nU 10\nD 1\nR 9\nL 6\nD 7\nU 1\nD 4\nL 3\nR 7\nU 1\nR 6\nD 4\nR 1\nD 4\nL 8\nR 1\nU 10\nD 1\nU 5\nR 6\nU 5\nD 2\nU 10\nR 8\nL 7\nU 6\nL 4\nR 6\nL 7\nU 3\nR 4\nD 1\nL 4\nR 7\nD 2\nL 4\nU 3\nD 6\nU 10\nD 5\nR 8\nU 5\nL 9\nD 4\n" <> ...
+```
+
+```elixir
+defmodule RopeBridge do
+  defstruct head: {0, 0}, tail: {0, 0}, ets_table: nil
+
+  def init do
+    ets_table = :ets.new(__MODULE__, [:ordered_set])
+    initial_state = %__MODULE__{ets_table: ets_table}
+    save_state(initial_state)
+    initial_state
+  end
+
+  def calculate(initial_state, input) do
+    input
+    |> parse_input()
+    |> Enum.reduce(initial_state, &move(&2, &1))
+  end
+
+  def get_result(state) do
+    get_data(state)
+    |> Enum.uniq_by(fn {_key, {_head, tail}} -> tail end)
+    |> Enum.count()
+  end
+
+  def get_data(state), do: :ets.tab2list(state.ets_table)
+
+  defp parse_input(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn
+      <<"U", " ", raw_value::binary>> -> {:up, raw_value |> String.to_integer()}
+      <<"D", " ", raw_value::binary>> -> {:down, raw_value |> String.to_integer()}
+      <<"L", " ", raw_value::binary>> -> {:left, raw_value |> String.to_integer()}
+      <<"R", " ", raw_value::binary>> -> {:right, raw_value |> String.to_integer()}
+    end)
+  end
+
+  defp move(state, {_direction, times} = command) do
+    Enum.reduce(1..times, state, fn _, acc ->
+      acc
+      |> move_head(command)
+      |> move_tail()
+      |> save_state()
+    end)
+  end
+
+  defp save_state(state) do
+    inserted_at = System.monotonic_time()
+    :ets.insert(state.ets_table, [{inserted_at, {state.head, state.tail}}])
+    state
+  end
+
+  defp move_head(%{head: {x, y}} = state, {:up, _}), do: %{state | head: {x, y + 1}}
+  defp move_head(%{head: {x, y}} = state, {:down, _}), do: %{state | head: {x, y - 1}}
+  defp move_head(%{head: {x, y}} = state, {:left, _}), do: %{state | head: {x - 1, y}}
+  defp move_head(%{head: {x, y}} = state, {:right, _}), do: %{state | head: {x + 1, y}}
+
+  defp move_tail(%{head: {head_x, head_y}, tail: {tail_x, tail_y}} = state)
+       when head_x == tail_x and head_y == tail_y do
+    state
+  end
+
+  defp move_tail(%{head: {head_x, _}, tail: {tail_x, _}} = state) when head_x == tail_x do
+    state |> put_tail_y_next_to_head_y()
+  end
+
+  defp move_tail(%{head: {_, head_y}, tail: {_, tail_y}} = state) when head_y == tail_y do
+    state |> put_tail_x_next_to_head_x()
+  end
+
+  defp move_tail(%{head: {head_x, head_y}, tail: {tail_x, tail_y}} = state)
+       when abs(head_x - tail_x) > 1 and abs(head_y - tail_y) > 1 do
+    state
+    |> put_tail_x_next_to_head_x()
+    |> put_tail_y_next_to_head_y()
+  end
+
+  defp move_tail(%{head: {head_x, _}, tail: {tail_x, _}} = state) when abs(head_x - tail_x) > 1 do
+    state
+    |> put_tail_x_next_to_head_x()
+    |> put_tail_y_equal_to_head_y()
+  end
+
+  defp move_tail(%{head: {_, head_y}, tail: {_, tail_y}} = state) when abs(head_y - tail_y) > 1 do
+    state
+    |> put_tail_x_equal_to_head_x()
+    |> put_tail_y_next_to_head_y()
+  end
+
+  defp move_tail(state), do: state
+
+  defp put_tail_x_equal_to_head_x(%{head: {head_x, _}, tail: {_, tail_y}} = state) do
+    %{state | tail: {head_x, tail_y}}
+  end
+
+  defp put_tail_y_equal_to_head_y(%{head: {_, head_y}, tail: {tail_x, _}} = state) do
+    %{state | tail: {tail_x, head_y}}
+  end
+
+  defp put_tail_x_next_to_head_x(%{head: {head_x, head_y}, tail: {tail_x, _}} = state) do
+    cond do
+      head_x > tail_x -> %{state | tail: {head_x - 1, head_y}}
+      head_x < tail_x -> %{state | tail: {head_x + 1, head_y}}
+      head_x == tail_x -> state
+    end
+  end
+
+  defp put_tail_y_next_to_head_y(%{head: {head_x, head_y}, tail: {_, tail_y}} = state) do
+    cond do
+      head_y > tail_y -> %{state | tail: {head_x, head_y - 1}}
+      head_y < tail_y -> %{state | tail: {head_x, head_y + 1}}
+      head_y == tail_y -> state
+    end
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, RopeBridge, <<70, 79, 82, 49, 0, 0, 30, ...>>, {:put_tail_y_next_to_head_y, 1}}
+```
+
+```elixir
+RopeBridge.init()
+|> RopeBridge.calculate(input1)
+|> RopeBridge.get_result()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+13
+```
+
+```elixir
+RopeBridge.init()
+|> RopeBridge.calculate(input2)
+|> RopeBridge.get_result()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+5735
+```
