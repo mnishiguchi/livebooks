@@ -1,0 +1,163 @@
+# persisting ETS tables to disk with DETS
+
+## about
+
+* [Elixir ETSインメモリデータベースのバックアップと復元](https://qiita.com/mnishiguchi/items/16f520f083c2487f93e1)
+
+## decide on table name
+
+```elixir
+# use the same table name for both ETS and DETS
+table_name = :my_data
+```
+
+## decide on DETS file location
+
+```elixir
+dets_dir = "tmp"
+File.mkdir(dets_dir)
+
+dets_path = Path.join([dets_dir, "#{table_name}.dets"])
+```
+
+## create a new in-memory ETS table
+
+* data structures
+  * set
+  * ordered_set
+  * bag
+  * duplicate_bag
+* access level
+  * public
+    * Any process can read or write to the table
+  * protected
+    * The owner process can read and write to the table. Other processes can only read the table. This is the default setting for the access rights
+  * private
+    * Only the owner process can read or write to the table
+
+https://www.erlang.org/doc/man/ets.html#new-2
+
+```elixir
+init_ets = fn ->
+  :ets.new(table_name, [
+    :named_table,
+    :bag,
+    :public
+  ])
+end
+
+init_ets.()
+```
+
+## create a new DETS table file for persistence
+
+* table type must be the same as the DETS table's
+
+* options
+
+  * auto_save
+  * type
+  * file
+
+https://www.erlang.org/doc/man/dets.html#open_file-2
+
+```elixir
+:dets.open_file(table_name,
+  type: :bag,
+  file: dets_path |> String.to_charlist(),
+  auto_save: 60_000
+)
+```
+
+## :ets.to_dets/2 and :dets.to_ets/2
+
+### :ets.to_dets/2
+
+* https://www.erlang.org/doc/man/ets.html#to_dets-2
+* Fills an already created/opened DETS table with the objects in the already opened ETS table
+
+### :dets.to_ets/2
+
+* https://www.erlang.org/doc/man/dets.html#to_ets-2
+* Inserts the objects of DETS table into ETS table
+
+## load DETS data into ETS
+
+```elixir
+:dets.to_ets(table_name, table_name)
+
+# check the contents of the ETS table
+:ets.tab2list(table_name)
+```
+
+## delete entries by key
+
+```elixir
+:ets.delete(table_name, :event_a)
+:ets.tab2list(table_name)
+```
+
+## delete all entries
+
+```elixir
+:ets.delete_all_objects(table_name)
+:ets.tab2list(table_name)
+```
+
+## insert entries into ETS
+
+```elixir
+entries = [
+  {:event_a, %{id: 1}},
+  {:event_a, %{id: 2}},
+  {:event_b, %{id: 3}}
+]
+
+for entry <- entries do
+  true = :ets.insert(table_name, entry)
+end
+
+# check the contents of the ETS table
+:ets.tab2list(table_name)
+```
+
+## save the ETS table to the DETS file
+
+```elixir
+persist_data = fn table_name ->
+  with :ok <- :dets.from_ets(table_name, table_name),
+       :ok <- :dets.sync(table_name) do
+    :ok
+  else
+    {:error, reason} ->
+      Logger.error("Unable to sync DETS #{table_name}, #{inspect(reason)}")
+  end
+end
+
+persist_data.(table_name)
+```
+
+## recreate the ETS table from scratch
+
+```elixir
+:ets.delete(table_name)
+
+init_ets.()
+
+# now the ETS table is empty
+[] = :ets.tab2list(table_name)
+```
+
+## restore all the ETS data from the DETS table
+
+```elixir
+:dets.to_ets(table_name, table_name)
+
+# now the ETS table should be filled with data from the backup
+:ets.tab2list(table_name)
+```
+
+## Links
+
+* https://elixirpatterns.dev/
+* https://github.com/elixir-lsp/elixir-ls/blob/02d3b2e035bcba2f3b8454ba197260e954da3b6d/apps/language_server/lib/language_server/tracer.ex#L281-L289
