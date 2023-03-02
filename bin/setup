@@ -9,6 +9,7 @@ mix local.rebar --force
 # Make a local copy of livebook as a submodule
 rm -fr livebook
 git submodule add -f https://github.com/livebook-dev/livebook ./livebook
+git submodule update --remote
 
 (
   cd ./livebook
