@@ -1,0 +1,83 @@
+# Counting numbers performantly
+
+## :couters module
+
+* counter module does addition and subtraction on an array of numbers performantly
+* used in Elixir's [Logger.Backends](https://github.com/elixir-lang/elixir/blob/b20ad8a1514008595bebe95ed9f8dfc67380a779/lib/logger/lib/logger/backends/internal.ex)
+* See https://www.erlang.org/doc/man/counters.html
+* [Elixir 高性能な數の數え方（counters）](https://qiita.com/mnishiguchi/items/b249ce780a064cc52d65)
+
+## Determine counter size
+
+```elixir
+# how many numbers to manage
+counter_size = 2
+
+# one-based numbering
+autorace_index = 1
+toukon_index = 2
+```
+
+## Create a counter instance
+
+* options
+  * `:atomics` (default)
+  * `write_concurrency`
+
+```elixir
+my_counter = :counters.new(counter_size, [:write_concurrency])
+
+get_state = fn ->
+  %{
+    autorace: :counters.get(my_counter, autorace_index),
+    toukon: :counters.get(my_counter, toukon_index)
+  }
+end
+
+get_state.()
+```
+
+## Add number to counter
+
+```elixir
+:counters.add(my_counter, autorace_index, 1)
+:counters.add(my_counter, toukon_index, 123)
+get_state.()
+```
+
+## Subtract number from counter
+
+```elixir
+:counters.sub(my_counter, autorace_index, 124)
+:counters.sub(my_counter, toukon_index, 24)
+get_state.()
+```
+
+## Overwrite counter
+
+```elixir
+:counters.put(my_counter, autorace_index, 0)
+:counters.put(my_counter, toukon_index, 0)
+get_state.()
+```
+
+## Count large mounts of numbers
+
+```elixir
+do_count = fn _ ->
+  case Enum.random([:toukon, :autorace]) do
+    :toukon -> :counters.add(my_counter, toukon_index, 1)
+    :autorace -> :counters.add(my_counter, autorace_index, 1)
+  end
+end
+
+1..100_000
+|> Task.async_stream(&do_count.(&1), max_concurrency: 500)
+|> Stream.run()
+
+get_state.()
+```
+
+## Links
+
+* https://elixirpatterns.dev/
