@@ -1,0 +1,147 @@
+# Agent
+
+## description
+
+* Agent-related basics
+* https://elixirpatterns.dev
+
+## Agent module
+
+* manage state in a process
+* wraps the GenServer behaviour
+
+## simple stack with Agent
+
+* house all Agent calls
+* abstract away how it works under the hood
+* start the Agent as a named process so we can reference the process by name
+
+```elixir
+defmodule MyStack do
+  use Agent
+
+  def start_link(initial_state \\ []) do
+    # synchronously start the Agent process
+    Agent.start_link(
+      fn -> initial_state end,
+      name: __MODULE__
+    )
+  end
+
+  def stop do
+    # synchronously stop the Agent process
+    Agent.stop(__MODULE__)
+  end
+
+  def push(element) do
+    Agent.update(
+      __MODULE__,
+      fn state -> [element | state] end
+    )
+  end
+
+  def pop do
+    # get and update the agent state in one operation
+    Agent.get_and_update(
+      __MODULE__,
+      fn
+        [] ->
+          {_result, _new_state} = {{:error, "empty stack"}, []}
+
+        [head | rest] ->
+          {_result, _new_state} = {head, rest}
+      end
+    )
+  end
+
+  def inspect do
+    Agent.get(
+      __MODULE__,
+      fn state -> state end
+    )
+  end
+end
+```
+
+```elixir
+MyStack.start_link([])
+
+MyStack.inspect()
+```
+
+```elixir
+for value <- 1..10 do
+  MyStack.push(value)
+end
+
+MyStack.inspect()
+```
+
+```elixir
+MyStack.pop()
+```
+
+```elixir
+MyStack.stop()
+```
+
+```elixir
+# `use Agent` generates `child_spec/1`
+MyStack.child_spec([])
+```
+
+## Process introspection
+
+### description
+
+* extract the state of processes
+* see the memory usage of individual processes
+* etc
+
+### tools and techniques
+
+* [Stuff Goes Bad: ERLANG IN ANGER](https://www.erlang-in-anger.com)
+* [:erlang.garbage_collect/1](https://www.erlang.org/doc/man/erlang.html#garbage_collect-0) - force a garbage collection
+* [:erlang.trace/3](https://www.erlang.org/doc/man/erlang.html#trace-3) - inspect call stacks
+
+```elixir
+MyStack.start_link([])
+```
+
+```elixir
+pid = Process.whereis(MyStack)
+
+Process.info(pid)
+```
+
+```elixir
+:sys.get_state(MyStack)
+```
+
+```elixir
+:sys.replace_state(MyStack, fn state -> [123 | state] end)
+```
+
+```elixir
+:sys.get_status(MyStack)
+```
+
+```elixir
+# List all the PIDs currently executing on the current BEAM instance
+Process.list()
+```
+
+```elixir
+# find the process with the largest total heap size
+# (how much memory the process is using)
+Process.list()
+|> Enum.max_by(fn pid -> Process.info(pid, :total_heap_size) end)
+|> Process.info()
+```
+
+```elixir
+# find the process with the highest reduction count
+Process.list()
+|> Enum.max_by(fn pid -> Process.info(pid, :reductions) end)
+|> Process.info()
+```
