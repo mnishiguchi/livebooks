@@ -4,7 +4,8 @@
 Mix.install([
   {:evision, "0.1.29"},
   {:kino, "~> 0.7.0"},
-  {:exla, "~> 0.4.0"}
+  {:exla, "~> 0.4.0"},
+  {:req, "~> 0.3.0"}
 ])
 ```
 
@@ -23,8 +24,29 @@ Mix.install([
 alias Evision, as: Cv
 ```
 
+## Download data files
+
 ```elixir
-File.cwd!()
+default_image_url = "https://github.com/livebook-dev/livebook/raw/main/static/images/logo.png"
+input_image_url_input = Kino.Input.textarea("Image URL", default: default_image_url)
+```
+
+```elixir
+downloads_dir = System.tmp_dir!()
+
+download = fn url ->
+  save_as = Path.join(downloads_dir, URI.encode_www_form(url))
+  unless File.exists?(save_as), do: Req.get!(url, output: save_as)
+  save_as
+end
+
+data_files =
+  [
+    # an image that is to be used as input
+    input_image: Kino.Input.read(input_image_url_input)
+  ]
+  |> Enum.map(fn {key, url} -> {key, download.(url)} end)
+  |> Map.new()
 ```
 
 ## Mat.zerosで黒色画像の作成
@@ -87,21 +109,27 @@ mat_to_img = &Kino.Image.new(Cv.imencode(".png", &1), :png)
 ## imreadで画像の読み込み
 
 ```elixir
-livebook_logo = Cv.imread("static/images/logo.png")
-img = livebook_logo
+img = Cv.imread(data_files.input_image)
 ```
 
 ## imwriteでファイル書き込み
 
 ```elixir
-Cv.imwrite("tmp/logo" <> ".png", img)
+# write the image as PNG
+png_path = Path.join(System.tmp_dir!(), "opencv_basics_img" <> ".png")
+Cv.imwrite(png_path, img)
+png_path
 ```
 
 ```elixir
-Cv.imwrite("tmp/logo" <> ".jpg", img)
+# write the image as JPG
+jpg_path = Path.join(System.tmp_dir!(), "opencv_basics_img" <> ".jpg")
+Cv.imwrite(jpg_path, img)
+jpg_path
 ```
 
 ```elixir
+# error without on ext
 {:error, _} = Cv.imwrite("images/logo", img)
 ```
 
