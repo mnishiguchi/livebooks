@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:evision, "~> 0.1.21"},
+  {:evision, "0.1.29"},
   {:kino, "~> 0.7.0"},
   {:exla, "~> 0.4.0"}
 ])
@@ -20,7 +20,7 @@ Mix.install([
 * 画像処理の関数を使用できる
 
 ```elixir
-alias Evision, as: Ev
+alias Evision, as: Cv
 ```
 
 ```elixir
@@ -34,14 +34,14 @@ File.cwd!()
 
 ```elixir
 # 第一引数で指定したサイズで0で埋めた行列を作成
-Ev.Mat.zeros({100, 100}, :u8)
+Cv.Mat.zeros({100, 100}, :u8)
 ```
 
 ```elixir
 # RGBの値で作ってMatで表示
-Ev.Mat.zeros({100, 100, 3}, :u8)
-|> Ev.Mat.to_nx()
-|> Ev.Mat.from_nx_2d()
+Cv.Mat.zeros({100, 100, 3}, :u8)
+|> Cv.Mat.to_nx()
+|> Cv.Mat.from_nx_2d()
 |> dbg()
 
 :ok
@@ -54,7 +54,7 @@ Ev.Mat.zeros({100, 100, 3}, :u8)
 * 第3引数：型
 
 ```elixir
-Ev.Mat.full({100, 100}, 200, :u8)
+Cv.Mat.full({100, 100}, 200, :u8)
 ```
 
 ## Mat.from_nx_2dでNxから色画像の作成
@@ -65,19 +65,19 @@ shape = {250, 250, 3}
 red =
   Nx.tensor([0, 0, 255], type: :u8)
   |> Nx.broadcast(shape)
-  |> Ev.Mat.from_nx_2d()
+  |> Cv.Mat.from_nx_2d()
 
 green =
   Nx.tensor([0, 255, 0], type: :u8)
   |> Nx.broadcast(shape)
-  |> Ev.Mat.from_nx_2d()
+  |> Cv.Mat.from_nx_2d()
 
 blue =
   Nx.tensor([255, 0, 0], type: :u8)
   |> Nx.broadcast(shape)
-  |> Ev.Mat.from_nx_2d()
+  |> Cv.Mat.from_nx_2d()
 
-mat_to_img = &Kino.Image.new(Ev.imencode(".png", &1), :png)
+mat_to_img = &Kino.Image.new(Cv.imencode(".png", &1), :png)
 
 [red, green, blue]
 |> Enum.map(mat_to_img)
@@ -87,67 +87,67 @@ mat_to_img = &Kino.Image.new(Ev.imencode(".png", &1), :png)
 ## imreadで画像の読み込み
 
 ```elixir
-livebook_logo = Ev.imread("static/images/logo.png")
+livebook_logo = Cv.imread("static/images/logo.png")
 img = livebook_logo
 ```
 
 ## imwriteでファイル書き込み
 
 ```elixir
-Ev.imwrite("tmp/logo" <> ".png", img)
+Cv.imwrite("tmp/logo" <> ".png", img)
 ```
 
 ```elixir
-Ev.imwrite("tmp/logo" <> ".jpg", img)
+Cv.imwrite("tmp/logo" <> ".jpg", img)
 ```
 
 ```elixir
-{:error, _} = Ev.imwrite("images/logo", img)
+{:error, _} = Cv.imwrite("images/logo", img)
 ```
 
 ## resize
 
 ```elixir
 {w, h} = {200, 200}
-img = Ev.resize(img, {w, h})
+img = Cv.resize(img, {w, h})
 ```
 
 ## rotate
 
 ```elixir
-Ev.rotate(img, Ev.cv_ROTATE_90_CLOCKWISE())
+Cv.rotate(img, Cv.Constant.cv_ROTATE_90_CLOCKWISE())
 ```
 
 ```elixir
-Ev.rotate(img, Ev.cv_ROTATE_90_COUNTERCLOCKWISE())
+Cv.rotate(img, Cv.Constant.cv_ROTATE_90_COUNTERCLOCKWISE())
 ```
 
 ```elixir
-Ev.rotate(img, Ev.cv_ROTATE_180())
+Cv.rotate(img, Cv.Constant.cv_ROTATE_180())
 ```
 
 ## flip
 
 ```elixir
 # 縦方向に反転
-Ev.flip(img, 0)
+Cv.flip(img, 0)
 ```
 
 ```elixir
 # 横方向に反転
-Ev.flip(img, 1)
+Cv.flip(img, 1)
 ```
 
 ## hconcatで横連結
 
 ```elixir
-Ev.hconcat([img, img])
+Cv.hconcat([img, img])
 ```
 
 ## vconcatで縦連結
 
 ```elixir
-Ev.vconcat([img, img])
+Cv.vconcat([img, img])
 ```
 
 ## rectangle
@@ -159,7 +159,7 @@ end_point = {x + w, y + h}
 color = {255, 255, 255}
 options = [thickness: 5]
 
-Ev.rectangle(img, start_point, end_point, color, options)
+Cv.rectangle(img, start_point, end_point, color, options)
 ```
 
 ```elixir
@@ -169,7 +169,7 @@ end_point = {x + w, y + h}
 color = {255, 255, 255}
 options = [thickness: -1]
 
-Ev.rectangle(img, start_point, end_point, color, options)
+Cv.rectangle(img, start_point, end_point, color, options)
 ```
 
 ## circle
@@ -180,7 +180,7 @@ diameter = 40
 color = {255, 255, 255}
 options = [thickness: 3]
 
-Ev.circle(img, center, diameter, color, options)
+Cv.circle(img, center, diameter, color, options)
 ```
 
 ```elixir
@@ -192,7 +192,7 @@ end_point = 360
 color = {255, 255, 255}
 options = [thickness: 1]
 
-Ev.ellipse(img, {ox, oy}, {w, h}, rotation, start_point, end_point, color, options)
+Cv.ellipse(img, {ox, oy}, {w, h}, rotation, start_point, end_point, color, options)
 ```
 
 ```elixir
@@ -204,7 +204,7 @@ end_point = 180
 color = {255, 255, 255}
 options = [thickness: -1]
 
-Ev.ellipse(img, {ox, oy}, {w, h}, rotation, start_point, end_point, color, options)
+Cv.ellipse(img, {ox, oy}, {w, h}, rotation, start_point, end_point, color, options)
 ```
 
 ## putText
@@ -214,14 +214,14 @@ text = "LiveViewJP"
 position = {20, 120}
 options = [thickness: 2]
 
-Ev.putText(img, text, position, Ev.cv_FONT_ITALIC(), 1.0, color, options)
+Cv.putText(img, text, position, Cv.Constant.cv_FONT_ITALIC(), 1.0, color, options)
 ```
 
 ## Mat.roiで切り取り
 
 ```elixir
 {x, y, w, h} = {40, 10, 50, 80}
-Ev.Mat.roi(img, {x, y, x + w, y + h})
+Cv.Mat.roi(img, {x, y, x + w, y + h})
 ```
 
 ## warpAffineでアフィン変換
@@ -232,8 +232,8 @@ Ev.Mat.roi(img, {x, y, x + w, y + h})
 {w, h} = {200, 200}
 {x, y} = {50, -10}
 
-m_shift = Nx.tensor([[1, 0, x], [0, 1, y]], type: :f32) |> Ev.Mat.from_nx()
-sheer_img = Ev.warpAffine(img, m_shift, {w, h})
+m_shift = Nx.tensor([[1, 0, x], [0, 1, y]], type: :f32) |> Cv.Mat.from_nx()
+sheer_img = Cv.warpAffine(img, m_shift, {w, h})
 ```
 
 ### 回転
@@ -244,8 +244,8 @@ center = {w / 2, h / 2}
 angle = 45
 scale = 1.0
 
-m_rotate = Ev.getRotationMatrix2D(center, angle, scale)
-rotation_img = Ev.warpAffine(img, m_rotate, {w, h})
+m_rotate = Cv.getRotationMatrix2D(center, angle, scale)
+rotation_img = Cv.warpAffine(img, m_rotate, {w, h})
 ```
 
 ### スキュー(平行四辺形に変形する処理)
@@ -258,6 +258,6 @@ rotation_img = Ev.warpAffine(img, m_rotate, {w, h})
 {w, h} = {200, 200}
 {a, b} = {0.2, 0.0}
 
-m_shear = Nx.tensor([[1, a, 0], [b, 1, 0]], type: :f32) |> Ev.Mat.from_nx()
-shear_img = Ev.warpAffine(img, m_shear, {w, h})
+m_shear = Nx.tensor([[1, a, 0], [b, 1, 0]], type: :f32) |> Cv.Mat.from_nx()
+shear_img = Cv.warpAffine(img, m_shear, {w, h})
 ```
