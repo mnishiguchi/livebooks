@@ -1,0 +1,219 @@
+# YOLOv3 object detection with OpenCV DNN
+
+```elixir
+Mix.install([
+  {:evision, "0.1.29"},
+  {:kino, "~> 0.8.0"},
+  {:req, "~> 0.3.0"}
+])
+```
+
+## Introduction
+
+* Detect objects using OpenCV DNN module with a pre-trained YOLO model
+* [Elixir の evision で YOLOv3 の物体検出を実行する](https://qiita.com/RyoWakabayashi/items/f7960ba642dfbaa05a9c) by RyoWakabayashi
+
+## YOLO
+
+* YOLO (You Only Look Once)
+* a method to do object detection
+
+## OpenCV DNN module
+
+* DNN (Deep Neural Network)
+* used for running inference on images and videos
+
+## Download data files
+
+* https://github.com/pjreddie/darknet
+
+```elixir
+default_image_url = "https://raw.githubusercontent.com/pjreddie/darknet/master/data/dog.jpg"
+input_image_url_input = Kino.Input.textarea("Image URL", default: default_image_url)
+```
+
+```elixir
+downloads_dir = System.tmp_dir!()
+
+download = fn url ->
+  save_as = Path.join(downloads_dir, URI.encode_www_form(url))
+  unless File.exists?(save_as), do: Req.get!(url, output: save_as)
+  save_as
+end
+
+data_files =
+  [
+    # a YOLO v3 weights file pre-trained on COCO (Common Objects in COntext) dataset 
+    yolov3_weights: "https://pjreddie.com/media/files/yolov3.weights",
+    # a YOLO v3 config file
+    yolov3_config: "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg",
+    # a text file containing 80 class names
+    coco_names: "https://raw.githubusercontent.com/pjreddie/darknet/master/data/coco.names",
+    # an image that is to be used as input
+    input_image: Kino.Input.read(input_image_url_input)
+  ]
+  |> Enum.map(fn {key, url} -> {key, download.(url)} end)
+  |> Map.new()
+```
+
+## Alias modules
+
+```elixir
+alias Evision, as: Cv
+alias TFLiteElixir, as: TFLite
+alias TFLiteElixir.TFLiteTensor
+```
+
+## Prepare input
+
+### Read input image
+
+```elixir
+input_image_mat = Cv.imread(data_files.input_image)
+{img_height, img_width, _} = Cv.Mat.shape(input_image_mat)
+IO.puts("height: #{img_height}")
+IO.puts("width: #{img_width}")
+input_image_mat
+```
+
+### Read class names
+
+```elixir
+class_names =
+  data_files.coco_names
+  |> File.stream!()
+  |> Enum.map(&String.trim/1)
+```
+
+### Create network with pre-trained model and configuration
+
+```elixir
+net =
+  Cv.DNN.readNet(
+    data_files.yolov3_weights,
+    config: data_files.yolov3_config,
+    framework: ""
+  )
+```
+
+## Run inference
+
+```elixir
+input_blob = Cv.DNN.blobFromImage(input_image_mat, size: {608, 608}, swapRB: true, crop: false)
+output_layer_names = Cv.DNN.Net.getUnconnectedOutLayersNames(net)
+
+# set input blob for the network
+predictions =
+  net
+  |> Cv.DNN.Net.setInput(
+    input_blob,
+    name: "",
+    scalefactor: 1 / 255,
+    mean: {0, 0, 0}
+  )
+  |> Cv.DNN.Net.forward(outBlobNames: output_layer_names)
+```
+
+## Get info from predictions
+
+```elixir
+score_threshold = 0.8
+
+predictions_info =
+  predictions
+  |> Enum.map(&Cv.Mat.to_nx(&1, Nx.BinaryBackend))
+  |> Nx.concatenate()
+  |> Nx.to_batched(1)
+  # ignore detections with low confidence
+  |> Enum.filter(fn t ->
+    score = Nx.to_number(t[0][4])
+    score > score_threshold
+  end)
+  |> Enum.map(fn t ->
+    # get class with top score
+    class_score_list = t[0][5..-1//1]
+    class_id = class_score_list |> Nx.argmax() |> Nx.to_number()
+
+    # calculate score
+    class_score = class_score_list[class_id] |> Nx.to_number()
+    score = Nx.to_number(t[0][4]) * class_score
+
+    # get bounding box
+    center_x = t[0][0] |> Nx.to_number()
+    center_y = t[0][1] |> Nx.to_number()
+    box_width = t[0][2] |> Nx.to_number()
+    box_height = t[0][3] |> Nx.to_number()
+    min_x = center_x - box_width / 2
+    min_y = center_y - box_height / 2
+    max_x = center_x + box_width / 2
+    max_y = center_y + box_height / 2
+
+    box = {min_x, min_y, max_x, max_y}
+
+    %{
+      box: box,
+      score: score,
+      class: class_id
+    }
+  end)
+```
+
+## Non-max suppression (NMS)
+
+* remove the redundant bounding boxes with an overlap greater than a threshold
+
+```elixir
+box_list = Enum.map(predictions_info, & &1.box)
+score_list = Enum.map(predictions_info, & &1.score)
+nms_threshold = 0.7
+
+index_list = Cv.DNN.nmsBoxes(box_list, score_list, score_threshold, nms_threshold)
+predictions_info_with_nms = Enum.map(index_list, &Enum.at(predictions_info, &1))
+```
+
+## Visualize predictions
+
+* Draw the detection result on the original image
+
+```elixir
+calc_prediction_box = fn {x, y, x_plus_w, y_plus_h} ->
+  {img_height, img_width, _} = Cv.Mat.shape(input_image_mat)
+
+  left = trunc(x * img_width)
+  top = trunc(y * img_height)
+  right = trunc(x_plus_w * img_width)
+  bottom = trunc(y_plus_h * img_height)
+
+  {left, top, right, bottom}
+end
+
+for prediction_info <- predictions_info_with_nms, reduce: input_image_mat do
+  acc_mat ->
+    {left, top, right, bottom} = calc_prediction_box.(prediction_info.box)
+
+    box_start_point = {left, top}
+    box_end_point = {right, bottom}
+    box_color = {255, 0, 0}
+
+    label_text = class_names |> Enum.at(prediction_info.class)
+    label_start_point = {left + 6, top + 30}
+    label_font_scale = 0.9
+    label_color = {0, 0, 255}
+
+    acc_mat
+    |> Cv.rectangle(
+      box_start_point,
+      box_end_point,
+      box_color,
+      thickness: 4
+    )
+    |> Cv.putText(
+      label_text,
+      label_start_point,
+      Cv.Constant.cv_FONT_HERSHEY_SIMPLEX(),
+      label_font_scale,
+      label_color,
+      thickness: 2
+    )
+end
+```

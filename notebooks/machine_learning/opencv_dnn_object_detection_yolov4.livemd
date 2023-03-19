@@ -1,0 +1,161 @@
+# YOLOv4 object detection with OpenCV DNN
+
+```elixir
+Mix.install([
+  {:evision, "0.1.29"},
+  {:kino, "~> 0.8.0"},
+  {:req, "~> 0.3.0"}
+])
+```
+
+## Introduction
+
+* Detect objects using OpenCV DNN module with a pre-trained YOLO model
+* [EvisionのDNN.DetectionModelでYOLOv4を使って物体検知](https://qiita.com/the_haigo/items/3f8b4d1801cdbba3bfe8) by the_haigo
+
+## YOLO
+
+* YOLO (You Only Look Once)
+* a method to do object detection
+
+## OpenCV DNN module
+
+* DNN (Deep Neural Network)
+* used for running inference on images and videos
+
+## Download data files
+
+* https://github.com/AlexeyAB/darknet/releases
+
+```elixir
+default_image_url = "https://raw.githubusercontent.com/pjreddie/darknet/master/data/dog.jpg"
+input_image_url_input = Kino.Input.textarea("Image URL", default: default_image_url)
+```
+
+```elixir
+downloads_dir = System.tmp_dir!()
+
+download = fn url ->
+  save_as = Path.join(downloads_dir, URI.encode_www_form(url))
+  unless File.exists?(save_as), do: Req.get!(url, output: save_as)
+  save_as
+end
+
+data_files =
+  [
+    # a YOLO weights file pre-trained on COCO (Common Objects in COntext) dataset 
+    yolo_weights: "https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4.weights",
+    # a YOLO config file
+    yolo_config: "https://raw.githubusercontent.com/AlexeyAB/darknet/master/cfg/yolov4.cfg",
+    # a text file containing 80 class names
+    coco_names: "https://raw.githubusercontent.com/AlexeyAB/darknet/master/data/coco.names",
+    # an image that is to be used as input
+    input_image: Kino.Input.read(input_image_url_input)
+  ]
+  |> Enum.map(fn {key, url} -> {key, download.(url)} end)
+  |> Map.new()
+```
+
+## Alias modules
+
+```elixir
+alias Evision, as: Cv
+alias TFLiteElixir, as: TFLite
+alias TFLiteElixir.TFLiteTensor
+```
+
+## Prepare input
+
+### Read input image
+
+```elixir
+input_image_mat = Cv.imread(data_files.input_image)
+{img_height, img_width, _} = Cv.Mat.shape(input_image_mat)
+IO.puts("height: #{img_height}")
+IO.puts("width: #{img_width}")
+input_image_mat
+```
+
+### Read class names
+
+```elixir
+class_names = data_files.coco_names |> File.read!() |> String.split("\n", trim: true)
+```
+
+### Load pre-trained data and build the model
+
+```elixir
+model =
+  data_files.yolo_weights
+  |> Cv.DNN.DetectionModel.detectionModel(config: data_files.yolo_config)
+  |> Cv.DNN.DetectionModel.setInputParams(
+    # Convert the RGB value of the image to the range of 0.0 to 1.0
+    scale: 1.0 / 255.0,
+    # Set the input image size to 416x416
+    size: {416, 416},
+    swapRB: true,
+    crop: false
+  )
+```
+
+## Run inference
+
+```elixir
+predictions_info =
+  Cv.DNN.DetectionModel.detect(
+    model,
+    input_image_mat,
+    confThreshold: 0.5,
+    nmsThreshold: 0.4
+  )
+  |> Tuple.to_list()
+  |> Enum.zip()
+  |> Enum.map(fn {class_id, confidence, box} ->
+    %{
+      class_id: class_id,
+      confidence: confidence,
+      box: box
+    }
+  end)
+```
+
+## Visualize predictions
+
+* Draw the detection result on the original image
+
+```elixir
+{img_height, img_width, _} = Cv.Mat.shape(input_image_mat)
+
+for %{
+      class_id: class_id,
+      confidence: confidence,
+      box: {x, y, w, h}
+    } <- predictions_info,
+    reduce: input_image_mat do
+  acc_mat ->
+    box_start_point = {x, y}
+    box_end_point = {x + w, y + h}
+    box_color = {0, 255, 0}
+
+    label_text = "#{Enum.at(class_names, class_id)}: #{Float.round(confidence, 3)}"
+    label_start_point = {x, y - 5}
+    label_font_scale = 0.8
+    label_color = {0, 255, 0}
+
+    acc_mat
+    |> Cv.rectangle(
+      box_start_point,
+      box_end_point,
+      box_color,
+      thickness: 1
+    )
+    |> Cv.putText(
+      label_text,
+      label_start_point,
+      Cv.Constant.cv_FONT_HERSHEY_SIMPLEX(),
+      label_font_scale,
+      label_color,
+      thickness: 2
+    )
+end
+```
