@@ -1,0 +1,176 @@
+# OpenCV bounding box
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.5.0"},
+  {:evision, "0.1.30"},
+  {:kino, "~> 0.7.0"}
+])
+
+alias Evision, as: Cv
+```
+
+## drawMarker
+
+```elixir
+points = [
+  [341.7188653945923, 43.22674134373665],
+  [347.2751133441925, 38.838579922914505],
+  [337.92927277088165, 38.542279705405235],
+  [353.93250143527985, 44.37031477689743],
+  [332.8073402643204, 43.509576231241226],
+  [358.5170496702194, 66.75018179416656],
+  [326.14933770895004, 69.04044127464294],
+  [346.01376926898956, 90.88503938913345],
+  [303.05064821243286, 94.19108891487122],
+  [313.96379578113556, 87.70558965206146],
+  [302.41149455308914, 88.45037072896957],
+  [348.3349735736847, 134.9865512251854],
+  [326.03289169073105, 134.1936908364296],
+  [351.33337795734406, 197.84249007701874],
+  [319.55440336465836, 196.71163403987885],
+  [355.83895242214203, 247.53425693511963],
+  [340.4989422559738, 243.13054251670837]
+]
+
+marker_opts = [markerSize: 5, markerType: Cv.Constant.cv_MARKER_STAR()]
+marker_color = {255, 255, 255}
+```
+
+```elixir
+## horizontal rectangle
+
+{img_height, img_width} = {338, 600}
+horizontal_pts = points
+
+# background
+horizontal_rect_mat =
+  Nx.tensor([0, 0, 0], type: :u8)
+  |> Nx.broadcast({img_height, img_width, 3})
+  |> Cv.Mat.from_nx_2d()
+
+# draw markers
+horizontal_rect_mat =
+  horizontal_pts
+  |> Enum.reduce(horizontal_rect_mat, fn [x, y], mat ->
+    Cv.drawMarker(mat, {trunc(x), trunc(y)}, marker_color, marker_opts)
+  end)
+```
+
+```elixir
+## vertical rectangle
+
+{img_height, img_width} = {600, 338}
+vertical_pts = for [x, y] <- points, do: [y, x]
+
+# background
+vertical_rect_mat =
+  Nx.tensor([0, 0, 0], type: :u8)
+  |> Nx.broadcast({img_height, img_width, 3})
+  |> Cv.Mat.from_nx_2d()
+
+# draw markers
+vertical_rect_mat =
+  vertical_pts
+  |> Enum.reduce(vertical_rect_mat, fn [x, y], mat ->
+    Cv.drawMarker(mat, {trunc(x), trunc(y)}, marker_color, marker_opts)
+  end)
+```
+
+## minEnclosingCircle
+
+```elixir
+{{center_x, center_y}, radius} =
+  horizontal_pts
+  |> Nx.tensor()
+  |> Cv.minEnclosingCircle()
+
+horizontal_rect_mat
+|> Cv.circle({trunc(center_x), trunc(center_y)}, ceil(radius), {0, 255, 0}, thickness: 2)
+```
+
+## Calculate crop region with minEnclosingCircle
+
+```elixir
+calc_crop_region = fn {img_height, img_width}, %Nx.Tensor{} = points ->
+  {{center_x, center_y}, _radius} = Cv.minEnclosingCircle(points)
+
+  crop_size = Enum.min([img_height, img_width])
+  crop_size_half = div(crop_size, 2)
+
+  {{x, y}, {w, h}} =
+    if img_width > img_height do
+      {
+        {center_x - crop_size_half, 0},
+        {center_x + crop_size_half, crop_size}
+      }
+    else
+      {
+        {0, center_y - crop_size_half},
+        {crop_size, center_y + crop_size_half}
+      }
+    end
+
+  {{trunc(x), trunc(y)}, {trunc(w), trunc(h)}}
+end
+```
+
+```elixir
+## when the image is horizontal
+
+{img_height, img_width, _} = Cv.Mat.shape(horizontal_rect_mat)
+
+# calculate crop region
+{crop_start_point, crop_end_point} =
+  calc_crop_region.({img_height, img_width}, Nx.tensor(horizontal_pts))
+
+# draw crop region
+horizontal_rect_mat
+|> Cv.rectangle(crop_start_point, crop_end_point, {0, 255, 0}, thickness: 3)
+```
+
+```elixir
+## when the image is vertical
+
+{img_height, img_width, _} = Cv.Mat.shape(vertical_rect_mat)
+
+# calculate crop region
+{crop_start_point, crop_end_point} =
+  calc_crop_region.({img_height, img_width}, Nx.tensor(vertical_pts))
+
+# draw crop region
+vertical_rect_mat
+|> Cv.rectangle(crop_start_point, crop_end_point, {0, 255, 0}, thickness: 3)
+```
+
+## boundingRect
+
+```elixir
+## when the image is horizontal
+
+# calculate bounding box
+{x, y, w, h} =
+  horizontal_pts
+  |> Nx.tensor()
+  |> Cv.boundingRect()
+
+# draw bounding box
+horizontal_rect_mat
+# |> Cv.rectangle({x, y}, {w, h}, {0, 255, 0}, thickness: 3)
+|> Cv.rectangle({x, y, w, h}, {0, 255, 0})
+```
+
+```elixir
+## when the image is vertical
+
+# calculate bounding box
+{x, y, w, h} =
+  vertical_pts
+  |> Nx.tensor()
+  |> Cv.boundingRect()
+
+# draw bounding box
+vertical_rect_mat
+# |> Cv.rectangle({x, y}, {w, h}, {0, 255, 0}, thickness: 3)
+|> Cv.rectangle({x, y, w, h}, {0, 255, 0})
+```

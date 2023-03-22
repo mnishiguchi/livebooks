@@ -1,8 +1,8 @@
-# Evision basics
+# OpenCV basics
 
 ```elixir
 Mix.install([
-  {:evision, "0.1.29"},
+  {:evision, "0.1.30"},
   {:kino, "~> 0.7.0"},
   {:exla, "~> 0.4.0"},
   {:req, "~> 0.3.0"}
@@ -27,11 +27,6 @@ alias Evision, as: Cv
 ## Download data files
 
 ```elixir
-default_image_url = "https://github.com/livebook-dev/livebook/raw/main/static/images/logo.png"
-input_image_url_input = Kino.Input.textarea("Image URL", default: default_image_url)
-```
-
-```elixir
 downloads_dir = System.tmp_dir!()
 
 download = fn url ->
@@ -43,10 +38,16 @@ end
 data_files =
   [
     # an image that is to be used as input
-    input_image: Kino.Input.read(input_image_url_input)
+    input_image: "https://github.com/livebook-dev/livebook/raw/main/static/images/logo.png"
   ]
   |> Enum.map(fn {key, url} -> {key, download.(url)} end)
   |> Map.new()
+```
+
+```elixir
+Nx.tensor([255, 0, 0], type: :u8)
+|> Nx.broadcast({800, 400, 3})
+|> Cv.Mat.from_nx_2d()
 ```
 
 ## Mat.zerosで黒色画像の作成
@@ -55,8 +56,13 @@ data_files =
 * 第2引数：型
 
 ```elixir
+color = {255, 255, 255}
+font = Cv.Constant.cv_FONT_HERSHEY_SIMPLEX()
+
 # 第一引数で指定したサイズで0で埋めた行列を作成
-Cv.Mat.zeros({100, 100}, :u8)
+Cv.Mat.zeros({200, 200}, :u8)
+|> Cv.putText("hello", {16, 48}, font, 1, color, thickness: 2)
+|> Cv.circle({50, 40}, 30, color)
 ```
 
 ```elixir
@@ -136,8 +142,15 @@ jpg_path
 ## resize
 
 ```elixir
-{w, h} = {200, 200}
+{w, h} = {300, 300}
 img = Cv.resize(img, {w, h})
+```
+
+## Crop and resize
+
+```elixir
+img[[{10, 90}, {40, 120}]]
+|> Cv.resize({200, 200})
 ```
 
 ## rotate
@@ -232,7 +245,9 @@ end_point = 180
 color = {255, 255, 255}
 options = [thickness: -1]
 
-Cv.ellipse(img, {ox, oy}, {w, h}, rotation, start_point, end_point, color, options)
+Cv.ellipse(img, {ox, oy}, {w, h}, rotation, start_point, end_point, color, options)[
+  [0..40, 0..20]
+]
 ```
 
 ## putText
