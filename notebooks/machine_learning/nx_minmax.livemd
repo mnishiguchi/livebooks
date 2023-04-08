@@ -1,0 +1,124 @@
+# Nx minmax
+
+```elixir
+Mix.install(
+  [
+    {:nx, "~> 0.5.0"},
+    {:exla, "~> 0.5.0"},
+    {:evision, "0.1.30"},
+    {:benchee, "~> 1.1.0"}
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+
+alias Evision, as: Cv
+```
+
+## Data
+
+```elixir
+keypoints =
+  [
+    [341.7188653945923, 43.22674134373665],
+    [347.2751133441925, 38.838579922914505],
+    [337.92927277088165, 38.542279705405235],
+    [353.93250143527985, 44.37031477689743],
+    [332.8073402643204, 43.509576231241226],
+    [358.5170496702194, 66.75018179416656],
+    [326.14933770895004, 69.04044127464294],
+    [346.01376926898956, 90.88503938913345],
+    [303.05064821243286, 94.19108891487122],
+    [313.96379578113556, 87.70558965206146],
+    [302.41149455308914, 88.45037072896957],
+    [348.3349735736847, 134.9865512251854],
+    [326.03289169073105, 134.1936908364296],
+    [351.33337795734406, 197.84249007701874],
+    [319.55440336465836, 196.71163403987885],
+    [355.83895242214203, 247.53425693511963],
+    [340.4989422559738, 243.13054251670837]
+  ]
+  |> Nx.tensor(names: [:points, :values])
+```
+
+## Nx.reduce/4
+
+> Given this function relies on anonymous functions, it may not be available or efficient on all Nx backends. Therefore, you should avoid using reduce/4 whenever possible. Instead, use functions sum/2, reduce_max/2, all/1, and so forth.
+
+## Nx.reduce_min/2 and Nx.reduce_max/2
+
+```elixir
+# minimum value of all
+keypoints |> Nx.reduce_min() |> Nx.to_number()
+```
+
+```elixir
+# maximum value of all
+keypoints |> Nx.reduce_max() |> Nx.to_number()
+```
+
+```elixir
+# minimum values over an axis
+keypoints |> Nx.reduce_min(axes: [:points]) |> Nx.to_list()
+```
+
+```elixir
+# maximum values over an axis
+keypoints |> Nx.reduce_max(axes: [:points]) |> Nx.to_list()
+```
+
+```elixir
+minmax_by_nx = fn %Nx.Tensor{} = points_nx ->
+  [x_min, y_min] = points_nx |> Nx.reduce_min(axes: [:points]) |> Nx.to_list()
+  [x_max, y_max] = points_nx |> Nx.reduce_max(axes: [:points]) |> Nx.to_list()
+  {floor(x_min), floor(y_min), ceil(x_max), ceil(y_max)}
+end
+
+minmax_by_nx.(keypoints)
+```
+
+## Find minmax with Cv.boundingRect/1
+
+```elixir
+minmax_by_cv = fn %Nx.Tensor{} = points_nx ->
+  {x, y, w, h} = Cv.boundingRect(points_nx)
+  {x, y, x + w, y + h}
+end
+
+minmax_by_cv.(keypoints)
+```
+
+## Bench
+
+```elixir
+:rand.uniform()
+```
+
+```elixir
+gen_random_points = fn n ->
+  1..n
+  |> Enum.map(fn _ -> [:rand.uniform(), :rand.uniform()] end)
+  |> Nx.tensor(names: [:points, :values])
+end
+
+gen_random_points.(10)
+```
+
+```elixir
+inputs = %{
+  "small tensor" => gen_random_points.(100),
+  "medium tensor" => gen_random_points.(10_00),
+  "large tensor" => gen_random_points.(1_000_00)
+}
+```
+
+```elixir
+Benchee.run(
+  %{
+    "Nx" => minmax_by_nx,
+    "Cv" => minmax_by_cv
+  },
+  inputs: inputs
+)
+```
