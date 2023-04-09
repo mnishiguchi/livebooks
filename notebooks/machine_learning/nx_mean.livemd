@@ -1,0 +1,178 @@
+# Nx.Tensorの真ん中を求める
+
+```elixir
+Mix.install(
+  [
+    {:nx, "~> 0.5.0"},
+    {:exla, "~> 0.5.0"},
+    {:evision, "0.1.30"},
+    {:kino, "~> 0.7.0"}
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+
+alias Evision, as: Cv
+```
+
+## いろんな真ん中
+
+いろんな真ん中が考えられそうです。
+
+### 平均値（mean, average）
+
+* 集合の要素の総和を集合の要素数で割ったもの
+* [https://ja.wikipedia.org/wiki/平均](https://ja.wikipedia.org/wiki/%E5%B9%B3%E5%9D%87)
+
+### 中央値（median）
+
+* 順位が中央である値
+* [https://ja.wikipedia.org/wiki/中央値](https://ja.wikipedia.org/wiki/%E4%B8%AD%E5%A4%AE%E5%80%A4)
+
+### 中点（midpoint）
+
+* ある2点を両端とする線分上にあり、その両端から等しい距離にある点
+* [https://ja.wikipedia.org/wiki/中点](https://ja.wikipedia.org/wiki/%E4%B8%AD%E7%82%B9)
+
+### 幾何中心（geometric center）
+
+* 図形に属する全ての点にわたってとった算術平均の位置にある点
+* [https://ja.wikipedia.org/wiki/幾何中心](https://ja.wikipedia.org/wiki/%E5%B9%BE%E4%BD%95%E4%B8%AD%E5%BF%83)
+
+### 外心（circumcenter）
+
+* 外接円の中心
+* [https://ja.wikipedia.org/wiki/外接円](https://ja.wikipedia.org/wiki/%E5%A4%96%E6%8E%A5%E5%86%86)
+
+## Nx.mean/2 で平均値を求める
+
+```elixir
+points_nx = Nx.tensor([1, 1, 1, 2, 2, 2, 3, 3, 123, 456])
+points_nx |> Nx.mean() |> Nx.to_number()
+```
+
+## Nx.median/2 で中央値を求める
+
+```elixir
+points_nx = Nx.tensor([1, 1, 1, 2, 2, 2, 3, 3, 123, 456])
+points_nx |> Nx.median() |> Nx.to_number()
+```
+
+## Nx.mean/2 で座標空間上の中点を求める
+
+```elixir
+points_nx =
+  Nx.tensor(
+    [
+      [50, 80],
+      [220, 230]
+    ],
+    names: [:point, :value]
+  )
+
+[midpoint_x, midpoint_y] =
+  points_nx
+  |> Nx.mean(axes: [:point])
+  |> Nx.to_list()
+```
+
+```elixir
+{img_height, img_width} = {300, 300}
+default_color = {255, 255, 255}
+midpoint_color = {0, 255, 0}
+
+background_mat =
+  Nx.tensor([0, 0, 0], type: :u8)
+  |> Nx.broadcast({img_height, img_width, 3})
+  |> Cv.Mat.from_nx_2d()
+
+Enum.reduce(
+  Nx.to_list(points_nx),
+  background_mat,
+  fn [x, y], acc_mat ->
+    Cv.drawMarker(acc_mat, {trunc(x), trunc(y)}, default_color)
+  end
+)
+|> Cv.drawMarker({trunc(midpoint_x), trunc(midpoint_y)}, midpoint_color, thickness: 2)
+```
+
+## Nx.mean/2 で幾何中心を求める
+
+単純な重心であれば各座標の平均で求められるそうです。
+
+[点群データ上のおける重心検出する方法について](https://jp.mathworks.com/matlabcentral/answers/324318-)
+
+```elixir
+points_nx =
+  Nx.tensor(
+    [
+      [50, 100],
+      [120, 230],
+      [220, 60]
+    ],
+    names: [:point, :value]
+  )
+
+[midpoint_x, midpoint_y] =
+  points_nx
+  |> Nx.mean(axes: [:point])
+  |> Nx.to_list()
+```
+
+```elixir
+{img_height, img_width} = {300, 300}
+default_color = {255, 255, 255}
+midpoint_color = {0, 255, 0}
+
+background_mat =
+  Nx.tensor([0, 0, 0], type: :u8)
+  |> Nx.broadcast({img_height, img_width, 3})
+  |> Cv.Mat.from_nx_2d()
+
+Enum.reduce(
+  Nx.to_list(points_nx),
+  background_mat,
+  fn [x, y], acc_mat ->
+    Cv.drawMarker(acc_mat, {trunc(x), trunc(y)}, default_color)
+  end
+)
+|> Cv.drawMarker({trunc(midpoint_x), trunc(midpoint_y)}, midpoint_color, thickness: 2)
+```
+
+## Evision.minEnclosingCircle/1 で外接円の中心を求める
+
+```elixir
+points_nx =
+  Nx.tensor(
+    [
+      [50.0, 100.0],
+      [120.0, 230.0],
+      [220.0, 60.0]
+    ],
+    names: [:point, :value]
+  )
+
+{{center_x, center_y}, radius} = Cv.minEnclosingCircle(points_nx)
+```
+
+```elixir
+{img_height, img_width} = {300, 300}
+default_color = {255, 255, 255}
+circle_color = {0, 255, 0}
+
+background_mat =
+  Nx.tensor([0, 0, 0], type: :u8)
+  |> Nx.broadcast({img_height, img_width, 3})
+  |> Cv.Mat.from_nx_2d()
+
+Enum.reduce(
+  Nx.to_list(points_nx),
+  background_mat,
+  fn [x, y], acc_mat ->
+    Cv.drawMarker(acc_mat, {trunc(x), trunc(y)}, default_color)
+  end
+)
+|> Cv.circle({trunc(center_x), trunc(center_y)}, ceil(radius), circle_color, thickness: 2)
+|> Cv.drawMarker({trunc(center_x), trunc(center_y)}, circle_color, thickness: 2)
+```
