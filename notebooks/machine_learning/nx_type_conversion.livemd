@@ -1,0 +1,96 @@
+# Nx type conversion
+
+```elixir
+Mix.install(
+  [
+    {:nx, "~> 0.5.0"},
+    {:exla, "~> 0.5.0"},
+    {:benchee, "~> 1.1.0"}
+  ],
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
+)
+```
+
+## Introduction
+
+* [Nx for Absolute Beginners](https://dockyard.com/blog/2022/03/15/nx-for-absolute-beginners)
+* Nx.as_type does an element-wise type conversion
+
+```elixir
+Nx.tensor([[1.6, 2.8, -1.2], [3.5, 2.3, 3.2]])
+|> Nx.as_type({:u, 8})
+```
+
+## Nx.as_type then Nx.to_list
+
+```elixir
+t =
+  Nx.tensor([
+    [341.7188653945923, 43.22674134373665],
+    [347.2751133441925, 38.838579922914505],
+    [337.92927277088165, 38.542279705405235]
+  ])
+
+trunc_by_nx = fn t ->
+  t
+  |> Nx.as_type({:u, 32})
+  |> Nx.to_list()
+end
+
+trunc_by_nx.(t)
+```
+
+## Nx.to_list then Enum.map
+
+```elixir
+t =
+  Nx.tensor([
+    [341.7188653945923, 43.22674134373665],
+    [347.2751133441925, 38.838579922914505],
+    [337.92927277088165, 38.542279705405235]
+  ])
+
+trunc_by_enum = fn t ->
+  t
+  |> Nx.to_list()
+  |> Enum.map(fn point -> Enum.map(point, &trunc/1) end)
+end
+
+trunc_by_enum.(t)
+```
+
+## Bench
+
+```elixir
+:rand.uniform()
+```
+
+```elixir
+gen_random_points = fn n ->
+  1..n
+  |> Enum.map(fn _ -> [:rand.uniform(), :rand.uniform()] end)
+  |> Nx.tensor(names: [:points, :values])
+end
+
+gen_random_points.(10)
+```
+
+```elixir
+inputs = %{
+  "small tensor" => gen_random_points.(100),
+  "medium tensor" => gen_random_points.(10_00),
+  "large tensor" => gen_random_points.(1_000_00)
+}
+```
+
+```elixir
+Benchee.run(
+  %{
+    "Nx" => trunc_by_nx,
+    "Enum" => trunc_by_enum
+  },
+  inputs: inputs
+)
+```
