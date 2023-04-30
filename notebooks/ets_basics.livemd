@@ -1,5 +1,11 @@
 # ETS
 
+```elixir
+Mix.install([
+  {:kino, "~> 0.9.0"}
+])
+```
+
 ## ETS
 
 * general purpose data storage
@@ -25,7 +31,7 @@ https://www.erlang.org/doc/man/ets.html
 https://www.erlang.org/doc/man/ets.html#new-2
 
 ```elixir
-my_ets_set = :ets.new(:my_ets_set, [:set, :named_table])
+:ets.new(:my_ets_set, [:set, :named_table])
 ```
 
 ## :ets.insert/2
@@ -43,8 +49,10 @@ grouped_users = [
 
 # insert data entries
 for user <- grouped_users do
-  true = :ets.insert(my_ets_set, user)
+  true = :ets.insert(:my_ets_set, user)
 end
+
+Kino.ETS.new(:my_ets_set)
 ```
 
 ## :ets.tab2list/1
@@ -54,7 +62,7 @@ end
 https://www.erlang.org/doc/man/ets.html#tab2list-1
 
 ```elixir
-:ets.tab2list(my_ets_set)
+:ets.tab2list(:my_ets_set)
 ```
 
 ## :ets.info/1
@@ -64,7 +72,7 @@ https://www.erlang.org/doc/man/ets.html#tab2list-1
 https://www.erlang.org/doc/man/ets.html#info-1
 
 ```elixir
-table_info = :ets.info(my_ets_set)
+table_info = :ets.info(:my_ets_set)
 ```
 
 ## :ets.lookup/2
@@ -75,15 +83,5 @@ table_info = :ets.info(my_ets_set)
 https://www.erlang.org/doc/man/ets.html#lookup-2
 
 ```elixir
-:ets.lookup(my_ets_set, 1)
-```
-
-## :ets.tab2list/1
-
-* dump all entries
-
-https://www.erlang.org/doc/man/ets.html#tab2list-1
-
-```elixir
-:ets.tab2list(my_ets_set)
+:ets.lookup(:my_ets_set, 1)
 ```
