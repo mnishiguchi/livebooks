@@ -1,0 +1,254 @@
+# Bitwise
+
+## Introduction
+
+https://qiita.com/mnishiguchi/items/1e0a1dd8de64dbb95d62
+
+Bitwiseモジュールの関数を使用して、整数に対してビット単位のバイナリ関数を実行できます。
+
+|                     | function | operator |
+| ------------------- | -------- | -------- |
+| bitwise AND         | `band/2` | `&&&`    |
+| bitwise OR          | `bor/2`  | `|||`    |
+| bitwise SHIFT LEFT  | `bsl/2`  | `<<<`    |
+| bitwise SHIFT RIGHT | `bsr/2`  | `>>>`    |
+| bitwise XOR         | `bxor/2` | なし   |
+| bitwise NOT         | `bnot/1` | なし   |
+
+### 資料
+
+* https://hexdocs.pm/elixir/Bitwise.html
+* https://ja.wikipedia.org/wiki/ビット演算
+* [ビット操作関数 Bitwise を使ってみる](https://qiita.com/kikuyuta/items/7212ea7c190b303aa606)
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## ビット演算
+
+```elixir
+import Bitwise
+```
+
+### bitwise NOT
+
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Venn10.svg/225px-Venn10.svg.png) 
+image credit: https://en.wikipedia.org/wiki/Negation
+
+```
+NOT 0111  (decimal 7)
+  = 1000  (decimal 8)
+```
+
+```elixir
+-0b1000 = bnot(0b0111)
+```
+
+```elixir
+# もとの数を n とすると bnot(n) は -n-1 の値を返す
+-0b0111 - 1
+```
+
+```elixir
+0b1000 = abs(bnot(0b0111))
+```
+
+整数の二進法表記を確認したい場合は、`Integer.to_string/2`もしくは`inspect/2`が便利です。どのフラグが立っているのか視覚的に確認できて有用です。
+
+```elixir
+"1000" = 8 |> Integer.to_string(2)
+```
+
+```elixir
+"0b1000" = 8 |> inspect(base: :binary)
+```
+
+### bitwise AND
+
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Venn0001.svg/225px-Venn0001.svg.png)
+image credit: https://en.wikipedia.org/wiki/Logical_conjunction
+
+```
+    0101 (decimal 5)
+AND 0011 (decimal 3)
+  = 0001 (decimal 1)
+```
+
+```elixir
+0b0001 = 0b0101 |> band(0b0011)
+```
+
+```elixir
+0b0001 = 0b0101 &&& 0b0011
+```
+
+### bitwise OR
+
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Venn0111.svg/225px-Venn0111.svg.png)
+image credit: https://en.wikipedia.org/wiki/Logical_disjunction
+
+```
+   0101 (decimal 5)
+OR 0011 (decimal 3)
+ = 0111 (decimal 7)
+```
+
+```elixir
+0b0111 = 0b0101 |> bor(0b0011)
+```
+
+```elixir
+0b0111 = 0b0101 ||| 0b0011
+```
+
+### bitwise XOR
+
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Venn0110.svg/225px-Venn0110.svg.png)
+image credit: https://en.wikipedia.org/wiki/Exclusive_or
+
+```
+    0101 (decimal 5)
+XOR 0011 (decimal 3)
+  = 0110 (decimal 6)
+```
+
+```elixir
+0b0110 = 0b0101 |> bxor(0b0011)
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Guard
+
+Bitwiseモジュールのすべての関数は、ガードとして使用できます。
+
+```elixir
+odd? = fn
+  int when Bitwise.band(int, 1) == 1 -> true
+  _ -> false
+end
+
+odd?.(1)
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## ビットマスク
+
+ビットマスクをつかってできること
+
+* 特定のビットをオン（1）やオフ（0）を反転
+* 特定のビットの状態（1または0）を知る
+
+https://ja.wikipedia.org/wiki/マスク_(情報工学)
+
+<!-- livebook:{"break_markdown":true} -->
+
+ビットマスクを作る関数を用意します。[最下位ビット（LSB）](https://ja.wikipedia.org/wiki/最下位ビット)の位置を基準とし、そこからの相対位置（オフセット）のビットをたてます。
+
+```elixir
+import Bitwise
+
+mask = fn bit_position ->
+  1 <<< bit_position
+end
+```
+
+この関数を用いて各ビットを操作するビットマスクを作ります。
+
+```elixir
+0b00000001 = mask.(0)
+0b00000010 = mask.(1)
+0b00000100 = mask.(2)
+0b00001000 = mask.(3)
+0b00010000 = mask.(4)
+0b00100000 = mask.(5)
+0b01000000 = mask.(6)
+0b10000000 = mask.(7)
+```
+
+複数のビットを操作したい場合は、ビットマスクを組み合わせることができます。
+
+```elixir
+0b00101010 = mask.(1) ||| mask.(3) ||| mask.(5)
+```
+
+### 特定のビットをオン
+
+```elixir
+add_flags_by_mask = fn uint8, mask ->
+  uint8 ||| mask
+end
+
+# 最下位ビットから2番目と4番目と6番目のビットをオンにする
+0b00101010 =
+  0b00000000
+  |> add_flags_by_mask.(mask.(1) ||| mask.(3) ||| mask.(5))
+```
+
+### 特定のビットをオフ
+
+```elixir
+remove_flags_by_mask = fn uint8, mask ->
+  uint8 &&& bnot(mask)
+end
+
+# 最下位4ビットをオフにする
+0b11110000 =
+  0b11111111
+  |> remove_flags_by_mask.(mask.(0) ||| mask.(1) ||| mask.(2) ||| mask.(3))
+```
+
+### 特定のビットを反転
+
+```elixir
+invert_flags_by_mask = fn uint8, mask ->
+  uint8 |> bxor(mask)
+end
+
+# 最下位ビットから2番目と4番目のビットを反転する
+0b00000010 =
+  0b00001000
+  |> invert_flags_by_mask.(mask.(1) ||| mask.(3))
+```
+
+### 特定のビットの状態を知る
+
+```elixir
+get_bit_by_mask = fn
+  uint8, mask when (uint8 &&& mask) == 0 -> 0
+  _, _ -> 1
+end
+
+# 最下位ビットから4番目のビットがオンであるか確認
+1 = 0b00001000 |> get_bit_by_mask.(mask.(3))
+0 = 0b00000000 |> get_bit_by_mask.(mask.(3))
+```
+
+```elixir
+get_bit_at = fn
+  uint8, index when (uint8 &&& 1 <<< index) == 0 -> 0
+  _, _ -> 1
+end
+
+# 最下位ビットから4番目のビットがオンであるか確認
+1 = 0b00001000 |> get_bit_at.(3)
+0 = 0b00000000 |> get_bit_at.(3)
+```
+
+```elixir
+<<_::4, x::1, _::3>> = <<0b00001000>>
+1 = x
+
+<<_::4, x::1, _::3>> = <<0b00000000>>
+0 = x
+```
+
+```elixir
+get_bit_at = fn bits, index when is_bitstring(bits) ->
+  <<_::size(index + 1), bit::1, _::bitstring>> = bits
+  bit
+end
+
+1 = <<0b00001000>> |> get_bit_at.(3)
+0 = <<0b00000000>> |> get_bit_at.(3)
+```
