@@ -1,0 +1,109 @@
+# Elixir downloading files
+
+```elixir
+Mix.install([
+  {:bumblebee, "~> 0.3.0"},
+  {:req, "~> 0.3.0"},
+  {:kino, "~> 0.9.0"}
+])
+```
+
+## Image source URL
+
+```elixir
+source_url = "https://elixir-lang.org/images/logo/logo.png"
+```
+
+## Destination path
+
+```elixir
+downloads_dir = Path.join(System.tmp_dir!(), "downloads")
+File.mkdir_p!(downloads_dir)
+
+extname = Path.extname(source_url)
+destination_path = Path.join(downloads_dir, "elixir_logo" <> extname)
+```
+
+## Req (binary)
+
+```elixir
+%{status: 200} = response = Req.get!(source_url)
+<<_::binary>> = response.body
+```
+
+## Req (file)
+
+```elixir
+Req.get!(source_url, output: destination_path)
+File.read!(destination_path)
+```
+
+## Bumblebee (file)
+
+```elixir
+Bumblebee.Utils.HTTP.download(source_url, destination_path)
+File.read!(destination_path)
+```
+
+## Req + Finch + ProgressBar
+
+* https://hexdocs.pm/req/Req.Steps.html#run_finch/1
+* https://hexdocs.pm/finch/Finch.html#t:stream/1
+* https://hexdocs.pm/mint/Mint.HTTP.html#stream/2
+
+```elixir
+defmodule MNishiguchi.Utils.HTTP do
+  def download(source_url, req_options \\ []) do
+    case Req.get(source_url, [finch_request: &finch_request/4] ++ req_options) do
+      {:ok, response} -> {:ok, response.body}
+      {:error, exception} -> {:error, exception}
+    end
+  end
+
+  def download!(source_url, req_options \\ []) do
+    Req.get!(source_url, [finch_request: &finch_request/4] ++ req_options).body
+  end
+
+  defp finch_request(req_request, finch_request, finch_name, finch_options) do
+    acc = Req.Response.new()
+
+    case Finch.stream(finch_request, finch_name, acc, &handle_message/2, finch_options) do
+      {:ok, response} -> {req_request, response}
+      {:error, exception} -> {req_request, exception}
+    end
+  end
+
+  defp handle_message({:status, status}, response), do: %{response | status: status}
+
+  defp handle_message({:headers, headers}, response) do
+    total_size =
+      Enum.find_value(headers, fn
+        {"content-length", v} -> String.to_integer(v)
+        {_k, _v} -> nil
+      end)
+
+    response
+    |> Map.put(:headers, headers)
+    |> Map.put(:private, %{total_size: total_size, downloaded_size: 0})
+  end
+
+  defp handle_message({:data, data}, response) do
+    new_downloaded_size = response.private.downloaded_size + byte_size(data)
+    ProgressBar.render(new_downloaded_size, response.private.total_size, suffix: :bytes)
+
+    response
+    |> Map.update!(:body, &(&1 <> data))
+    |> Map.update!(:private, &%{&1 | downloaded_size: new_downloaded_size})
+  end
+end
+```
+
+```elixir
+MNishiguchi.Utils.HTTP.download!(source_url, output: destination_path)
+File.read!(destination_path)
+```
+
+```elixir
+<<_::binary>> = data = MNishiguchi.Utils.HTTP.download!(source_url)
+data
+```
