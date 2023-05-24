@@ -1,0 +1,206 @@
+# Supervisor - data buffering
+
+```elixir
+Mix.install([{:kino, "~> 0.9.4"}])
+```
+
+## Introduction
+
+Practicing supervision, reading the book https://elixirpatterns.dev
+
+![](https://embed.filekitcdn.com/e/cKv6Q7GV3Wt7KM5pCMDidB/2hmUoCWEPqYF35oi5q6aC9)
+
+### what data buffering supervision tree is
+
+* consumes data asynchronously from other processes
+* summarizes that data
+* flushes that data at a regular interval
+
+### three components
+
+* `EventCollector`
+  * aggregates asynchronous cast messages from other processes
+* `EventFlusher`
+  * flushes the buffered data from `EventCollector`
+* `SummarizerSupervisor`
+  * monitors these two processes
+  * `:one_for_one` strategy because there is no interdependence between child processes
+
+![](https://user-images.githubusercontent.com/7563926/240450633-df912a89-6802-4d06-9a70-7532c95576f2.png)
+
+## Define modules
+
+```elixir
+defmodule User do
+  # these keys are required when creating a new struct
+  @enforce_keys [:id, :name, :plan]
+  defstruct [:id, :name, :plan]
+end
+```
+
+```elixir
+defmodule EventCollector do
+  use GenServer
+  require Logger
+
+  ## Client API
+
+  def start_link(options) do
+    GenServer.start_link(__MODULE__, options, name: __MODULE__)
+  end
+
+  def record_event(%User{} = user) do
+    GenServer.cast(__MODULE__, {:record_event, user})
+  end
+
+  def flush_events do
+    GenServer.call(__MODULE__, :flush_events)
+  end
+
+  ## Server callbacks
+
+  @initial_state %{count: 0, data: %{}}
+
+  @impl true
+  def init(_) do
+    {:ok, @initial_state}
+  end
+
+  # Records an event
+  @impl true
+  def handle_cast({:record_event, %User{} = user}, state) do
+    new_count = state.count + 1
+    new_data = Map.update(state.data, user.id, 1, &(&1 + 1))
+    {:noreply, %{state | count: new_count, data: new_data}}
+  end
+
+  # Flushes all the collected date
+  @impl true
+  def handle_call(:flush_events, _from, state) do
+    if state.count > 0 do
+      Logger.info("#{__MODULE__} - #{state.count} events flushed")
+    end
+
+    {:reply, state.data, @initial_state}
+  end
+end
+```
+
+```elixir
+defmodule EventFlusher do
+  use GenServer
+  require Logger
+
+  ## Client API
+
+  def start_link(options) do
+    GenServer.start_link(__MODULE__, options, name: __MODULE__)
+  end
+
+  ## Server callbacks
+
+  @impl true
+  def init(options) do
+    flush_interval = Keyword.fetch!(options, :flush_interval)
+    {:ok, flush_interval, {:continue, :schedule_next_run}}
+  end
+
+  @impl true
+  def handle_continue(:schedule_next_run, flush_interval) do
+    Process.send_after(self(), :perform_cron_work, flush_interval)
+    {:noreply, flush_interval}
+  end
+
+  @impl true
+  def handle_info(:perform_cron_work, flush_interval) do
+    buffered_events = EventCollector.flush_events()
+
+    # check the size of the map in constant time
+    unless map_size(buffered_events) == 0 do
+      # do something here
+      Logger.info(buffered_events)
+    end
+
+    {:noreply, flush_interval, {:continue, :schedule_next_run}}
+  end
+end
+```
+
+```elixir
+defmodule SummarizerSupervisor do
+  use Supervisor
+
+  def start_link(options) do
+    Supervisor.start_link(__MODULE__, options, name: __MODULE__)
+  end
+
+  @impl true
+  def init(options) do
+    children = [
+      {EventCollector, options},
+      {EventFlusher, options}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+end
+```
+
+## Run
+
+```elixir
+Supervisor.stop(SummarizerSupervisor)
+{:ok, sup} = SummarizerSupervisor.start_link(flush_interval: 1_000)
+```
+
+```elixir
+# Supervisor.which_children(:c.pid(0, 770, 0))
+Supervisor.which_children(sup)
+```
+
+```elixir
+test_users = [
+  %User{id: "1", name: "MegaCorp", plan: :enterprise},
+  %User{id: "2", name: "Gundam", plan: :basic},
+  %User{id: "3", name: "CoffeeCentral", plan: :free},
+  %User{id: "4", name: "CodeTogether", plan: :enterprise},
+  %User{id: "5", name: "FPFunHouse", plan: :basic}
+]
+
+Kino.DataTable.new(test_users)
+```
+
+```elixir
+1..100_000
+|> Task.async_stream(
+  fn _ ->
+    event = Enum.random(test_users)
+
+    EventCollector.record_event(event)
+  end,
+  max_concurrency: 2000
+)
+|> Stream.run()
+```
+
+## pros and cons
+
+### pros
+
+* achieve a fair amount of throughput with a simple supervision tree configuration
+* cheap to imlement
+
+### cons
+
+* everything is residing in memory until it is flushed and persisted somewhere else
+* potential data loss
+* singleton process can be a bottleneck
+
+## solution to potential data loss
+
+* ensure that you are draining connections to your application and shutting it down cleanly so that any buffered data is flushed prior to the application terminating
+* a complicated and expensive architecture is required to gurantee 100% data integrity
+
+## solution to bottleneck
+
+* replicate (horizontal scale) the processes contained within the supervision tree

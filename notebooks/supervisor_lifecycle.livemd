@@ -1,0 +1,128 @@
+# Supervisor - lifecycle
+
+```elixir
+Mix.install([{:kino, "~> 0.9.4"}])
+```
+
+## Introduction
+
+Practicing supervision, reading the book https://elixirpatterns.dev
+
+![](https://embed.filekitcdn.com/e/cKv6Q7GV3Wt7KM5pCMDidB/2hmUoCWEPqYF35oi5q6aC9)
+
+## Define modules
+
+![](https://user-images.githubusercontent.com/7563926/240440102-65c5a504-851f-47a9-9500-404a066d64af.png)
+
+```elixir
+defmodule SimpleGenServer do
+  use GenServer
+
+  def start_link(name) do
+    GenServer.start_link(__MODULE__, name, name: name)
+  end
+
+  # We need to override the default child_spec because we want to
+  # add a GenServer to the same Supervisor. In such a case, IDs must
+  # be different.
+  def child_spec(init_arg) do
+    Supervisor.child_spec(
+      %{
+        id: {__MODULE__, init_arg},
+        start: {__MODULE__, :start_link, [init_arg]}
+      },
+      []
+    )
+  end
+
+  @impl true
+  def init(name) do
+    # to ensure that our terminate/2 callback is invoked
+    Process.flag(:trap_exit, true)
+    IO.puts("Starting GenServer: #{inspect(name)}")
+    {:ok, name}
+  end
+
+  @impl true
+  def terminate(_reason, name) do
+    # The terminate/2 callback is invoked when a process is trapping exits,
+    # and its supervisor sends it an exit signal
+    IO.puts("Shutting down GenServer: #{inspect(name)}")
+    :ok
+  end
+end
+```
+
+```elixir
+defmodule ParentSupervisor do
+  use Supervisor
+
+  def start_link(init_arg) do
+    Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
+  end
+
+  @impl true
+  def init(_init_arg) do
+    IO.puts("Starting Supervisor: #{inspect(__MODULE__)}")
+
+    children = [
+      {SimpleGenServer, :gen_server1},
+      {ChildSupervisor, []},
+      {SimpleGenServer, :gen_server4}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+end
+```
+
+```elixir
+defmodule ChildSupervisor do
+  use Supervisor
+
+  def start_link(init_arg) do
+    Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
+  end
+
+  @impl true
+  def init(_init_arg) do
+    IO.puts("Starting Supervisor: #{inspect(__MODULE__)}")
+
+    children = [
+      {SimpleGenServer, :gen_server2},
+      {SimpleGenServer, :gen_server3}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_all)
+  end
+end
+```
+
+## Failure scenarios 1
+
+```elixir
+ParentSupervisor.start_link([])
+```
+
+```elixir
+Supervisor.stop(ParentSupervisor)
+```
+
+## Failure scenarios 2
+
+```elixir
+ParentSupervisor.start_link([])
+```
+
+```elixir
+GenServer.stop(:gen_server2, :brutal_kill)
+```
+
+```elixir
+GenServer.stop(:gen_server1, :brutal_kill)
+```
+
+```elixir
+GenServer.stop(ChildSupervisor, :brutal_kill)
+```
+
