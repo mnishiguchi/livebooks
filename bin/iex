@@ -6,7 +6,7 @@ cookie=$(cat './cookie.txt')
 (
   cd ./livebook
 
-  MIX_ENV=dev \
+  MIX_ENV=prod \
     LIVEBOOK_COOKIE="$cookie" \
     iex -S mix
 )

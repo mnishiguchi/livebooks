@@ -17,7 +17,9 @@ git submodule update --remote
 (
   cd ./livebook
 
+  export MIX_ENV=prod
   mix deps.update --all
+  mix compile
 )
 
 printf "==> Symlink this project to home\n"
