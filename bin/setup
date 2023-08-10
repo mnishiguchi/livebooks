@@ -1,12 +1,15 @@
 #!/bin/bash
 set -e
 
+printf "==> Check dependencies\n"
+
 elixir --version
 
 mix local.hex --force
 mix local.rebar --force
 
-# Make a local copy of livebook as a submodule
+printf "==> Make a local copy of livebook as a submodule\n"
+
 rm -fr livebook
 git submodule add -f https://github.com/livebook-dev/livebook ./livebook
 git submodule update --remote
@@ -16,3 +19,26 @@ git submodule update --remote
 
   mix deps.update --all
 )
+
+printf "==> Symlink this project to home\n"
+
+# Symlinks a directory if the directory exists.
+#
+# Usage:
+#
+#   symlink_dir dir1 dir2
+#
+function symlink_dir {
+  if [ -d "$1" ]; then
+    mkdir -p "$(dirname "$2")"
+    ln -sf "$1" "$2"
+    printf "✓ %s -> %s\n" "$1" "$2"
+  else
+    printf "✗ source directory does not exist: %s\n" "$1"
+  fi
+}
+
+PROJECT_DIR="$(pwd)"
+LINK_DEST="$HOME/$(basename "$PROJECT_DIR")"
+symlink_dir "$PROJECT_DIR" "$LINK_DEST"
+
