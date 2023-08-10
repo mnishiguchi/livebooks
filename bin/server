@@ -10,5 +10,6 @@ cookie=$(cat './cookie.txt')
     LIVEBOOK_COOKIE="$cookie" \
     LIVEBOOK_HOME="$HOME/livebooks/notebooks" \
     LIVEBOOK_TOKEN_ENABLED=false \
+    LIVEBOOK_PORT=0 \
     iex -S mix phx.server
 )
