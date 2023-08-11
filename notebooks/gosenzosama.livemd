@@ -1,0 +1,17 @@
+# Gosenzosama
+
+## Section
+
+ご先祖さまの数を数えてみたくなりました。数えてみます。
+
+```elixir
+defmodule Gosenzosama do
+  def count(sedai) when is_number(sedai) do
+    %{sedai: sedai, count: 2 ** sedai, years: 30 * sedai}
+  end
+end
+```
+
+```elixir
+for i <- 1..10, do: Gosenzosama.count(i)
+```
