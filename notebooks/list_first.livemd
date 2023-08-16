@@ -1,0 +1,143 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# List - get first item
+
+## Prepare lists
+
+```elixir
+lists = [
+  [],
+  [nil],
+  [1],
+  [1, 2],
+  [1, 2, 3]
+]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[[], [nil], [1], [1, 2], [1, 2, 3]]
+```
+
+## Prepare test function
+
+```elixir
+test_fun = fn do_test ->
+  for list <- lists do
+    try do
+      do_test.(list)
+    rescue
+      e -> inspect(e)
+    end
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Function<42.125776118/1 in :erl_eval.expr/6>
+```
+
+## hd
+
+```elixir
+test_fun.(fn list ->
+  hd(list)
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+["%ArgumentError{message: \"errors were found at the given arguments:\\n\\n  * 1st argument: not a nonempty list\\n\"}",
+ nil, 1, 1, 1]
+```
+
+## List.first/1
+
+```elixir
+test_fun.(fn list ->
+  List.first(list)
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[nil, nil, 1, 1, 1]
+```
+
+## Enum.fetch/2
+
+```elixir
+test_fun.(fn list ->
+  Enum.fetch(list, 0)
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[:error, {:ok, nil}, {:ok, 1}, {:ok, 1}, {:ok, 1}]
+```
+
+## Enum.fetch!/2
+
+```elixir
+test_fun.(fn list ->
+  Enum.fetch!(list, 0)
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+["%Enum.OutOfBoundsError{message: \"out of bounds error\"}", nil, 1, 1, 1]
+```
+
+## [first | _rest]
+
+```elixir
+test_fun.(fn list ->
+  [first | _rest] = list
+  first
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+["%MatchError{term: []}", nil, 1, 1, 1]
+```
+
+## [first, _, _]
+
+```elixir
+test_fun.(fn list ->
+  [first, _, _] = list
+  first
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+["%MatchError{term: []}", "%MatchError{term: [nil]}", "%MatchError{term: [1]}",
+ "%MatchError{term: [1, 2]}", 1]
+```
+
+## Enum.at/2
+
+```elixir
+test_fun.(fn list ->
+  Enum.at(list, 0)
+end)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[nil, nil, 1, 1, 1]
+```
