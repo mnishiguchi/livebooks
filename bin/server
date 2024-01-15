@@ -1,15 +1,13 @@
 #!/bin/bash
-set -e
+set -eu
 
-cookie=$(cat './cookie.txt')
+export MIX_ENV="prod"
+export LIVEBOOK_COOKIE="mnishiguchi"
+export LIVEBOOK_HOME="$HOME/Documents/livebooks/notebooks"
+export LIVEBOOK_TOKEN_ENABLED=false
+export LIVEBOOK_PORT=0
 
 (
   cd ./livebook
-
-  MIX_ENV=prod \
-    LIVEBOOK_COOKIE="$cookie" \
-    LIVEBOOK_HOME="$HOME/livebooks/notebooks" \
-    LIVEBOOK_TOKEN_ENABLED=false \
-    LIVEBOOK_PORT=0 \
-    iex -S mix phx.server
+  iex -S mix phx.server
 )

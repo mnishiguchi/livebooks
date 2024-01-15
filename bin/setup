@@ -1,46 +1,36 @@
 #!/bin/bash
-set -e
+set -eu
 
-printf "==> Check dependencies\n"
+# Get the location of this script
+whereisthis() { cd -- "$(dirname "$0")" >/dev/null 2>&1 && pwd -P; }
+this_dir="$(whereisthis)"
+echo "script location: $this_dir"
 
+# Set enviroment variables
+export MIX_ENV="prod"
+export LIVEBOOK_COOKIE="mnishiguchi"
+
+# Check dependencies
 elixir --version
-
 mix local.hex --force
 mix local.rebar --force
 
-printf "==> Make a local copy of livebook as a submodule\n"
-
-rm -fr livebook
-git submodule add -f https://github.com/livebook-dev/livebook ./livebook
-git submodule update --remote
-
 (
-  cd ./livebook
+  # Move to the livebooks root directory
+  cd "$this_dir"
+  cd ..
+  echo "moved into $(pwd)"
 
-  export MIX_ENV=prod
+  # Make a local copy of Livebook as a Git submodule
+  if [[ ! -d "livebook" ]]; then
+    git submodule add -f https://github.com/livebook-dev/livebook
+    git submodule update --remote
+  fi
+
+  cd "livebook"
+  echo "moved into $(pwd)"
+
+  # Compile Livebook
   mix deps.update --all
   mix compile
 )
-
-printf "==> Symlink this project to home\n"
-
-# Symlinks a directory if the directory exists.
-#
-# Usage:
-#
-#   symlink_dir dir1 dir2
-#
-function symlink_dir {
-  if [ -d "$1" ]; then
-    mkdir -p "$(dirname "$2")"
-    ln -sf "$1" "$2"
-    printf "✓ %s -> %s\n" "$1" "$2"
-  else
-    printf "✗ source directory does not exist: %s\n" "$1"
-  fi
-}
-
-PROJECT_DIR="$(pwd)"
-LINK_DEST="$HOME/$(basename "$PROJECT_DIR")"
-symlink_dir "$PROJECT_DIR" "$LINK_DEST"
-

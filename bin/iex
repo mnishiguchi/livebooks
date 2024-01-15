@@ -1,12 +1,10 @@
 #!/bin/bash
-set -e
+set -eu
 
-cookie=$(cat './cookie.txt')
+export MIX_ENV="prod"
+export LIVEBOOK_COOKIE="mnishiguchi"
 
 (
   cd ./livebook
-
-  MIX_ENV=prod \
-    LIVEBOOK_COOKIE="$cookie" \
-    iex -S mix
+  iex -S mix
 )
