@@ -1,0 +1,292 @@
+# Elixirで学び直す高校数学 in Elixir
+
+```elixir
+Mix.install([
+  {:kino_vega_lite, "~> 0.1.10"},
+  {:nx, "~> 0.7.0"}
+])
+```
+
+## Introduction
+
+* https://qiita.com/piacerex/items/6a925db4789feca598c9
+* https://qiita.com/piacerex/items/58d80aaf5a8804e90aa7
+
+## Plotting graphs
+
+```elixir
+my_data = %{
+  x: [1, 2, 3, 4, 5, 6, 7],
+  y: [64.3, 63.8, 63.6, 64.0, 63.5, 63.2, 63.1]
+}
+```
+
+```elixir
+VegaLite.new(width: 800, height: 300, title: "my_data")
+|> VegaLite.data_from_values(my_data, only: ["x", "y"])
+|> VegaLite.mark(:line)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative, scale: %{zero: false})
+```
+
+```elixir
+x = 1..11
+
+y =
+  for i <- x do
+    3 * i - 24
+  end
+
+my_data = %{x: x, y: y}
+```
+
+```elixir
+VegaLite.new(width: 800, height: 300, title: "my_data")
+|> VegaLite.data_from_values(my_data, only: ["x", "y"])
+|> VegaLite.mark(:line)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative, scale: %{zero: false})
+```
+
+## x-axis step and sample count
+
+### np.arange vs np.linspace
+
+* np.arange: 開始／終了／刻み幅
+* np.linspace: 開始／終了／要素数
+* https://stackoverflow.com/a/62106108/3837223
+
+### iota
+
+* 指定した数の 0 からの行列を作成
+* Pythonの`arange`はNxにはないので`Nx.iota`をつかって自分で書く
+
+```elixir
+arange = fn start, stop, step ->
+  how_many = round((stop - start) / step)
+
+  Nx.iota({how_many})
+  |> Nx.multiply(step)
+  |> Nx.add(start)
+end
+
+arange.(1, 3, 0.5)
+```
+
+```elixir
+## y = 3x
+
+start = -1.0
+stop = 1.01
+step = 0.01
+
+x = arange.(start, stop, step)
+y = Nx.multiply(x, 3)
+
+my_data = %{x: Nx.to_list(x), y: Nx.to_list(y)}
+```
+
+```elixir
+## y = 3x
+
+import Nx.Defn
+
+defmodule List33 do
+  defn triple(x) do
+    3 * x
+  end
+end
+
+start = -1.0
+stop = 1.01
+step = 0.01
+
+x = arange.(start, stop, step)
+y = List33.triple(x)
+
+my_data = %{x: Nx.to_list(x), y: Nx.to_list(y)}
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6Im15X2RhdGEiLCJoZWlnaHQiOjMwMCwibGF5ZXJzIjpbeyJhY3RpdmUiOnRydWUsImNoYXJ0X3R5cGUiOiJsaW5lIiwiY29sb3JfZmllbGQiOm51bGwsImNvbG9yX2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwiY29sb3JfZmllbGRfYmluIjpudWxsLCJjb2xvcl9maWVsZF9zY2FsZV9zY2hlbWUiOm51bGwsImNvbG9yX2ZpZWxkX3R5cGUiOm51bGwsImRhdGFfdmFyaWFibGUiOiJteV9kYXRhIiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoieCIsInhfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ4X2ZpZWxkX2JpbiI6bnVsbCwieF9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ4X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUiLCJ5X2ZpZWxkIjoieSIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ5X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUifV0sInZsX2FsaWFzIjoiRWxpeGlyLlZlZ2FMaXRlIiwid2lkdGgiOjgwMH0","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 800, height: 300, title: "my_data")
+|> VegaLite.data_from_values(my_data, only: ["x", "y"])
+|> VegaLite.mark(:line)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+## Solving linear simultaneous equations
+
+a + b = 1
+
+5a + b = 3
+
+```elixir
+Nx.LinAlg.solve(
+  # 左辺
+  Nx.tensor([
+    [1, 1],
+    [5, 1]
+  ]),
+  # 右辺
+  Nx.tensor([
+    1,
+    3
+  ])
+)
+```
+
+## Perpendicular lines
+
+```elixir
+import Nx.Defn
+
+defmodule List35 do
+  defn perpendicular_lines(x) do
+    %{
+      y1: 1 / 2 * x + 1 / 2,
+      y2: -2 * x + 7
+    }
+  end
+end
+
+start = -1
+stop = 6
+step = 1
+
+x = arange.(start, stop, step)
+%{y1: y1, y2: y2} = List35.perpendicular_lines(x)
+
+my_data1 = %{x: Nx.to_list(x), y: Nx.to_list(y1)}
+my_data2 = %{x: Nx.to_list(x), y: Nx.to_list(y2)}
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6bnVsbCwiaGVpZ2h0Ijo1MDAsImxheWVycyI6W3siYWN0aXZlIjp0cnVlLCJjaGFydF90eXBlIjoibGluZSIsImNvbG9yX2ZpZWxkIjpudWxsLCJjb2xvcl9maWVsZF9hZ2dyZWdhdGUiOm51bGwsImNvbG9yX2ZpZWxkX2JpbiI6bnVsbCwiY29sb3JfZmllbGRfc2NhbGVfc2NoZW1lIjpudWxsLCJjb2xvcl9maWVsZF90eXBlIjpudWxsLCJkYXRhX3ZhcmlhYmxlIjoibXlfZGF0YTEiLCJnZW9kYXRhX2NvbG9yIjoiYmx1ZSIsImxhdGl0dWRlX2ZpZWxkIjpudWxsLCJsb25naXR1ZGVfZmllbGQiOm51bGwsInhfZmllbGQiOiJ4IiwieF9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInhfZmllbGRfYmluIjpudWxsLCJ4X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInhfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSIsInlfZmllbGQiOiJ5IiwieV9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInlfZmllbGRfYmluIjpudWxsLCJ5X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInlfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSJ9LHsiYWN0aXZlIjp0cnVlLCJjaGFydF90eXBlIjoibGluZSIsImNvbG9yX2ZpZWxkIjpudWxsLCJjb2xvcl9maWVsZF9hZ2dyZWdhdGUiOm51bGwsImNvbG9yX2ZpZWxkX2JpbiI6bnVsbCwiY29sb3JfZmllbGRfc2NhbGVfc2NoZW1lIjpudWxsLCJjb2xvcl9maWVsZF90eXBlIjpudWxsLCJkYXRhX3ZhcmlhYmxlIjoibXlfZGF0YTIiLCJnZW9kYXRhX2NvbG9yIjoiYmx1ZSIsImxhdGl0dWRlX2ZpZWxkIjpudWxsLCJsb25naXR1ZGVfZmllbGQiOm51bGwsInhfZmllbGQiOiJ4IiwieF9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInhfZmllbGRfYmluIjpudWxsLCJ4X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInhfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSIsInlfZmllbGQiOiJ5IiwieV9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInlfZmllbGRfYmluIjpudWxsLCJ5X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInlfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSJ9XSwidmxfYWxpYXMiOiJFbGl4aXIuVmVnYUxpdGUiLCJ3aWR0aCI6MjUwfQ","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 250, height: 500)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.data_from_values(my_data1, only: ["x", "y"])
+  |> VegaLite.mark(:line)
+  |> VegaLite.encode_field(:x, "x", type: :quantitative)
+  |> VegaLite.encode_field(:y, "y", type: :quantitative),
+  VegaLite.new()
+  |> VegaLite.data_from_values(my_data2, only: ["x", "y"])
+  |> VegaLite.mark(:line)
+  |> VegaLite.encode_field(:x, "x", type: :quantitative)
+  |> VegaLite.encode_field(:y, "y", type: :quantitative)
+])
+```
+
+## Intersection of lines
+
+```
+(-3/2 * x) + (-1 * y) = -6
+(1/2 * x) + (-1 * y) = -2
+```
+
+```elixir
+Nx.LinAlg.solve(
+  # 左辺
+  Nx.tensor([
+    [-3 / 2, -1],
+    [1 / 2, -1]
+  ]),
+  # 右辺
+  Nx.tensor([
+    -6,
+    -2
+  ])
+)
+```
+
+## Perpendicular bisector
+
+```elixir
+import Nx.Defn
+
+defmodule List42 do
+  defn f(x) do
+    # 基となる線分の傾きと切片
+    a1 = (5 - 1) / (6 - 0)
+    b1 = 1
+
+    # 線分の中点
+    cx = (0 + 6) / 2
+    cy = (1 + 5) / 2
+
+    # 線分に直交する直線の傾き
+    a2 = -1 / a1
+
+    # 線分に直交する直線の切片
+    b2 = cy - a2 * cx
+
+    # 直線の式
+    %{
+      y1: a1 * x + b1,
+      y2: a2 * x + b2
+    }
+  end
+end
+
+x = arange.(0, 8, 1)
+y = List42.f(x)
+
+my_data1 = %{x: Nx.to_list(x), y: Nx.to_list(y.y1)}
+my_data2 = %{x: Nx.to_list(x), y: Nx.to_list(y.y2)}
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6bnVsbCwiaGVpZ2h0Ijo0MDAsImxheWVycyI6W3siYWN0aXZlIjp0cnVlLCJjaGFydF90eXBlIjoicG9pbnQiLCJjb2xvcl9maWVsZCI6bnVsbCwiY29sb3JfZmllbGRfYWdncmVnYXRlIjpudWxsLCJjb2xvcl9maWVsZF9iaW4iOm51bGwsImNvbG9yX2ZpZWxkX3NjYWxlX3NjaGVtZSI6bnVsbCwiY29sb3JfZmllbGRfdHlwZSI6bnVsbCwiZGF0YV92YXJpYWJsZSI6Im15X2RhdGExIiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoieCIsInhfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ4X2ZpZWxkX2JpbiI6bnVsbCwieF9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ4X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUiLCJ5X2ZpZWxkIjoieSIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ5X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUifSx7ImFjdGl2ZSI6dHJ1ZSwiY2hhcnRfdHlwZSI6ImxpbmUiLCJjb2xvcl9maWVsZCI6bnVsbCwiY29sb3JfZmllbGRfYWdncmVnYXRlIjpudWxsLCJjb2xvcl9maWVsZF9iaW4iOm51bGwsImNvbG9yX2ZpZWxkX3NjYWxlX3NjaGVtZSI6bnVsbCwiY29sb3JfZmllbGRfdHlwZSI6bnVsbCwiZGF0YV92YXJpYWJsZSI6Im15X2RhdGEyIiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoieCIsInhfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ4X2ZpZWxkX2JpbiI6bnVsbCwieF9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ4X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUiLCJ5X2ZpZWxkIjoieSIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ5X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUifV0sInZsX2FsaWFzIjoiRWxpeGlyLlZlZ2FMaXRlIiwid2lkdGgiOjMwMH0","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 300, height: 400)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.data_from_values(my_data1, only: ["x", "y"])
+  |> VegaLite.mark(:point)
+  |> VegaLite.encode_field(:x, "x", type: :quantitative)
+  |> VegaLite.encode_field(:y, "y", type: :quantitative),
+  VegaLite.new()
+  |> VegaLite.data_from_values(my_data2, only: ["x", "y"])
+  |> VegaLite.mark(:line)
+  |> VegaLite.encode_field(:x, "x", type: :quantitative)
+  |> VegaLite.encode_field(:y, "y", type: :quantitative)
+])
+```
+
+## Trigonometric ratios and circles
+
+* Nx.sin や Nx.cos に渡すラジアンを度数から計算する np.radians がNxに無いので、度数法からラジアンに変換する無名関数を作って計算
+
+radians = (degrees / 180) * pi
+
+```elixir
+# 度数をラジアンに変換する関数
+radians = fn degrees ->
+  degrees
+  |> Nx.divide(180)
+  |> Nx.multiply(Nx.Constants.pi())
+end
+
+# 角度
+th = Nx.linspace(0, 360, n: 360)
+
+# 円周上の点Pの座標
+x = Nx.sin(radians.(th))
+y = Nx.cos(radians.(th))
+
+my_data = %{x: Nx.to_list(x), y: Nx.to_list(y)}
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6bnVsbCwiaGVpZ2h0Ijo1MDAsImxheWVycyI6W3siYWN0aXZlIjp0cnVlLCJjaGFydF90eXBlIjoicG9pbnQiLCJjb2xvcl9maWVsZCI6bnVsbCwiY29sb3JfZmllbGRfYWdncmVnYXRlIjpudWxsLCJjb2xvcl9maWVsZF9iaW4iOm51bGwsImNvbG9yX2ZpZWxkX3NjYWxlX3NjaGVtZSI6bnVsbCwiY29sb3JfZmllbGRfdHlwZSI6bnVsbCwiZGF0YV92YXJpYWJsZSI6Im15X2RhdGEiLCJnZW9kYXRhX2NvbG9yIjoiYmx1ZSIsImxhdGl0dWRlX2ZpZWxkIjpudWxsLCJsb25naXR1ZGVfZmllbGQiOm51bGwsInhfZmllbGQiOiJ4IiwieF9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInhfZmllbGRfYmluIjpudWxsLCJ4X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInhfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSIsInlfZmllbGQiOiJ5IiwieV9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInlfZmllbGRfYmluIjpudWxsLCJ5X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInlfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSJ9XSwidmxfYWxpYXMiOiJFbGl4aXIuVmVnYUxpdGUiLCJ3aWR0aCI6NTAwfQ","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(width: 500, height: 500)
+|> VegaLite.data_from_values(my_data, only: ["x", "y"])
+|> VegaLite.mark(:point)
+|> VegaLite.encode_field(:x, "x", type: :quantitative)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
