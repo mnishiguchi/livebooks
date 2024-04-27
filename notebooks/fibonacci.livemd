@@ -81,24 +81,94 @@ end
 [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765]
 ```
 
-## Enum.reduce と Map でメモ化
+## Map でメモ化
 
 ```elixir
 mod = Mnishiguchi.Fibonacci04
 
 defmodule mod do
-  def calc(n, memo \\ %{0 => 0, 1 => 1})
+  def calc(n, lookup \\ %{0 => 0, 1 => 1})
 
-  def calc(n, memo) when is_map_key(memo, n), do: memo[n]
+  def calc(n, lookup) when is_map_key(lookup, n), do: lookup[n]
 
-  def calc(n, memo) do
-    2..n
-    |> Enum.reduce(memo, fn i, acc ->
-      new_memo = Map.merge(acc, %{(i - 2) => calc(i - 2, acc)})
-      new_memo = Map.merge(new_memo, %{(i - 1) => calc(i - 1, new_memo)})
-      Map.merge(new_memo, %{n => calc(i - 2, new_memo) + calc(i - 1, new_memo)})
-    end)
-    |> then(&calc(n, &1))
+  def calc(n, lookup) do
+    new_lookup =
+      Enum.reduce(2..n, lookup, fn i, acc ->
+        new_lookup = Map.merge(acc, %{(i - 2) => calc(i - 2, acc)})
+        new_lookup = Map.merge(new_lookup, %{(i - 1) => calc(i - 1, new_lookup)})
+        Map.merge(new_lookup, %{n => calc(i - 2, new_lookup) + calc(i - 1, new_lookup)})
+      end)
+
+    calc(n, new_lookup)
+  end
+end
+
+0..20 |> Enum.map(&mod.calc/1)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765]
+```
+
+## ETS でメモ化
+
+```elixir
+mod = Mnishiguchi.Fibonacci05
+
+defmodule mod do
+  alias __MODULE__.Fib
+  alias __MODULE__.FibCache
+
+  def calc(number) do
+    Fib.init()
+    Fib.calc(number)
+  end
+
+  defmodule Fib do
+    def init(), do: FibCache.init_table()
+
+    def calc(number) when number in 0..1, do: number
+
+    def calc(number) do
+      case FibCache.get_value(number) do
+        nil ->
+          value = calc(number - 1) + calc(number - 2)
+          FibCache.put_value(number, value)
+          value
+
+        value ->
+          value
+      end
+    end
+  end
+
+  defmodule FibCache do
+    @ets_table __MODULE__
+
+    def init_table() do
+      case :ets.whereis(@ets_table) do
+        :undefined ->
+          :ets.new(@ets_table, [:set, :named_table, :public])
+          :created
+
+        _ ->
+          :ets.delete_all_objects(@ets_table)
+          :cleared
+      end
+    end
+
+    def get_value(number) do
+      case :ets.lookup(@ets_table, number) do
+        [{^number, value}] -> value
+        [] -> nil
+      end
+    end
+
+    def put_value(number, value) do
+      :ets.insert(@ets_table, {number, value})
+    end
   end
 end
 
@@ -120,14 +190,15 @@ defmodule Mnishiguchi.FibonacciBench do
       Mnishiguchi.Fibonacci01,
       Mnishiguchi.Fibonacci02,
       Mnishiguchi.Fibonacci03,
-      Mnishiguchi.Fibonacci04
+      Mnishiguchi.Fibonacci04,
+      Mnishiguchi.Fibonacci05
     ]
     |> Map.new(fn mod -> {mod, &mod.calc/1} end)
     |> Benchee.run(inputs: %{"n" => n})
   end
 end
 
-Mnishiguchi.FibonacciBench.run(40)
+Mnishiguchi.FibonacciBench.run(20)
 ```
 
 <!-- livebook:{"output":true} -->
@@ -148,34 +219,30 @@ memory time: 0 ns
 reduction time: 0 ns
 parallel: 1
 inputs: n
-Estimated total run time: 28 s
+Estimated total run time: 35 s
 
 Benchmarking Elixir.Mnishiguchi.Fibonacci01 with input n ...
 Benchmarking Elixir.Mnishiguchi.Fibonacci02 with input n ...
-Warning: The function you are trying to benchmark is super fast, making measurements more unreliable!
-This holds especially true for memory measurements or when running with hooks.
-
-See: https://github.com/bencheeorg/benchee/wiki/Benchee-Warnings#fast-execution-warning
-
-You may disable this warning by passing print: [fast_warning: false] as configuration options.
-
 Benchmarking Elixir.Mnishiguchi.Fibonacci03 with input n ...
 Benchmarking Elixir.Mnishiguchi.Fibonacci04 with input n ...
+Benchmarking Elixir.Mnishiguchi.Fibonacci05 with input n ...
 Calculating statistics...
 Formatting results...
 
 ##### With input n #####
 Name                                     ips        average  deviation         median         99th %
-Elixir.Mnishiguchi.Fibonacci02        9.95 M      100.55 ns   ±632.60%       95.90 ns      112.50 ns
-Elixir.Mnishiguchi.Fibonacci03        4.00 M      249.92 ns ±13755.97%         167 ns         292 ns
-Elixir.Mnishiguchi.Fibonacci04     0.00619 M   161550.16 ns    ±11.92%      159793 ns   187407.04 ns
-Elixir.Mnishiguchi.Fibonacci01     0.00000 M1557759026.25 n    ±15.63%  1675952304 ns  1686473717 ns
+Elixir.Mnishiguchi.Fibonacci02    10292.11 K      0.0972 μs  ±3598.05%      0.0830 μs        0.21 μs
+Elixir.Mnishiguchi.Fibonacci03     2907.53 K        0.34 μs  ±9481.12%       0.167 μs        3.54 μs
+Elixir.Mnishiguchi.Fibonacci05      232.67 K        4.30 μs   ±263.81%        2.96 μs       14.92 μs
+Elixir.Mnishiguchi.Fibonacci04       21.64 K       46.22 μs    ±50.36%       30.58 μs      105.30 μs
+Elixir.Mnishiguchi.Fibonacci01       14.09 K       70.98 μs    ±47.79%       52.04 μs      160.60 μs
 
 Comparison: 
-Elixir.Mnishiguchi.Fibonacci02        9.95 M
-Elixir.Mnishiguchi.Fibonacci03        4.00 M - 2.49x slower +149.37 ns
-Elixir.Mnishiguchi.Fibonacci04     0.00619 M - 1606.73x slower +161449.61 ns
-Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.70 ns
+Elixir.Mnishiguchi.Fibonacci02    10292.11 K
+Elixir.Mnishiguchi.Fibonacci03     2907.53 K - 3.54x slower +0.25 μs
+Elixir.Mnishiguchi.Fibonacci05      232.67 K - 44.23x slower +4.20 μs
+Elixir.Mnishiguchi.Fibonacci04       21.64 K - 475.68x slower +46.12 μs
+Elixir.Mnishiguchi.Fibonacci01       14.09 K - 730.49x slower +70.88 μs
 ```
 
 <!-- livebook:{"output":true} -->
@@ -200,8 +267,8 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
     pre_check: false,
     formatters: [Benchee.Formatters.Console],
     percentiles: ~c"2c",
-    print: %{configuration: true, fast_warning: true, benchmarking: true},
-    inputs: [{"n", 40}],
+    print: %{configuration: true, benchmarking: true, fast_warning: true},
+    inputs: [{"n", 20}],
     input_names: ["n"],
     save: false,
     load: false,
@@ -221,7 +288,7 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       job_name: "Elixir.Mnishiguchi.Fibonacci02",
       function: &Mnishiguchi.Fibonacci02.calc/1,
       input_name: "n",
-      input: 40,
+      input: 20,
       before_each: nil,
       after_each: nil,
       before_scenario: nil,
@@ -229,24 +296,23 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 100.54582952749882,
-          ips: 9945713.359762024,
-          std_dev: 636.0501974853212,
-          std_dev_ratio: 6.325972946609032,
-          std_dev_ips: 62916313.64858259,
-          median: 95.9,
-          percentiles: %{50 => 95.9, 99 => 112.5},
-          mode: 95.8,
-          minimum: 87.5,
-          maximum: 891630.0,
+          average: 97.16178240261333,
+          ips: 10292112.549523415,
+          std_dev: 3495.9279076929615,
+          std_dev_ratio: 35.980483490995866,
+          std_dev_ips: 370315185.6755986,
+          median: 83.0,
+          percentiles: %{50 => 83.0, 99 => 209.0},
+          mode: 83,
+          minimum: 0,
+          maximum: 9025674,
           relative_more: nil,
           relative_less: nil,
           absolute_difference: nil,
-          sample_size: 3817611
+          sample_size: 12510619
         },
-        samples: [100.0, 95.8, 95.8, 100.0, 100.0, 95.8, 95.9, 95.9, 520.8, 108.3, 112.5, 104.1,
-         104.1, 100.0, 100.0, 100.0, 100.0, 112.5, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
-         116.7, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, ...]
+        samples: [666, 125, 84, 84, 42, 83, 83, 83, 83, 84, 84, 83, 83, 41, 83, 42, 84, 42, 83, 41,
+         83, 83, 41, 83, 42, 84, 42, 83, 83, 83, 83, 42, 84, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -292,7 +358,7 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       job_name: "Elixir.Mnishiguchi.Fibonacci03",
       function: &Mnishiguchi.Fibonacci03.calc/1,
       input_name: "n",
-      input: 40,
+      input: 20,
       before_each: nil,
       after_each: nil,
       before_scenario: nil,
@@ -300,23 +366,94 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 249.92040984537303,
-          ips: 4001273.848017074,
-          std_dev: 34378.96687869765,
-          std_dev_ratio: 137.5596610935781,
-          std_dev_ips: 550413874.4758258,
+          average: 343.9341241558932,
+          ips: 2907533.5355404727,
+          std_dev: 32608.795805873848,
+          std_dev_ratio: 94.81116735916973,
+          std_dev_ips: 275666648.64052624,
           median: 167.0,
-          percentiles: %{50 => 167.0, 99 => 292.0},
+          percentiles: %{50 => 167.0, 99 => 3542.0},
           mode: 167,
-          minimum: 83,
-          maximum: 62285975,
-          relative_more: 2.485636759076327,
-          relative_less: 0.402311398215564,
-          absolute_difference: 149.3745803178742,
-          sample_size: 12390917
+          minimum: 42,
+          maximum: 62433231,
+          relative_more: 3.539808715434213,
+          relative_less: 0.2825011407084844,
+          absolute_difference: 246.77234175327987,
+          sample_size: 8680329
         },
-        samples: [1792, 208, 167, 166, 167, 208, 167, 167, 166, 167, 1250, 250, 167, 166, 209, 166,
-         167, 167, 167, 167, 166, 167, 166, 125, 166, 209, 166, 167, 167, 167, 1125, 209, ...]
+        samples: [6457, 250, 208, 167, 167, 542, 208, 166, 250, 250, 9334, 333, 208, 208, 208, 166,
+         3375, 208, 166, 208, 167, 3250, 208, 166, 167, 750, 208, 209, 209, 208, 1750, 167, ...]
+      },
+      memory_usage_data: %Benchee.CollectionData{
+        statistics: %Benchee.Statistics{
+          average: nil,
+          ips: nil,
+          std_dev: nil,
+          std_dev_ratio: nil,
+          std_dev_ips: nil,
+          median: nil,
+          percentiles: nil,
+          mode: nil,
+          minimum: nil,
+          maximum: nil,
+          relative_more: nil,
+          relative_less: nil,
+          absolute_difference: nil,
+          sample_size: 0
+        },
+        samples: []
+      },
+      reductions_data: %Benchee.CollectionData{
+        statistics: %Benchee.Statistics{
+          average: nil,
+          ips: nil,
+          std_dev: nil,
+          std_dev_ratio: nil,
+          std_dev_ips: nil,
+          median: nil,
+          percentiles: nil,
+          mode: nil,
+          minimum: nil,
+          maximum: nil,
+          relative_more: nil,
+          relative_less: nil,
+          absolute_difference: nil,
+          sample_size: 0
+        },
+        samples: []
+      }
+    },
+    %Benchee.Scenario{
+      name: "Elixir.Mnishiguchi.Fibonacci05",
+      job_name: "Elixir.Mnishiguchi.Fibonacci05",
+      function: &Mnishiguchi.Fibonacci05.calc/1,
+      input_name: "n",
+      input: 20,
+      before_each: nil,
+      after_each: nil,
+      before_scenario: nil,
+      after_scenario: nil,
+      tag: nil,
+      run_time_data: %Benchee.CollectionData{
+        statistics: %Benchee.Statistics{
+          average: 4297.919883345253,
+          ips: 232670.69353132235,
+          std_dev: 11338.36007005911,
+          std_dev_ratio: 2.638104101008506,
+          std_dev_ips: 613809.5107894747,
+          median: 2959.0,
+          percentiles: %{50 => 2959.0, 99 => 14917.0},
+          mode: 2917,
+          minimum: 2708,
+          maximum: 7126549,
+          relative_more: 44.234675168223895,
+          relative_less: 0.022606699296355472,
+          absolute_difference: 4200.758100942639,
+          sample_size: 1078053
+        },
+        samples: [28834, 3416, 3084, 15000, 13708, 10041, 9166, 3459, 15292, 15124, 6792, 7667,
+         20582, 11834, 7375, 19000, 15040, 7833, 15583, 13499, 4250, 3625, 14041, 10917, 11541,
+         3125, 10959, 15000, 11582, 7000, 14750, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -362,7 +499,7 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       job_name: "Elixir.Mnishiguchi.Fibonacci04",
       function: &Mnishiguchi.Fibonacci04.calc/1,
       input_name: "n",
-      input: 40,
+      input: 20,
       before_each: nil,
       after_each: nil,
       before_scenario: nil,
@@ -370,24 +507,24 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 161550.15855197178,
-          ips: 6190.0279700331785,
-          std_dev: 19256.67130321975,
-          std_dev_ratio: 0.11919933397666552,
-          std_dev_ips: 737.8472113248857,
-          median: 159793.0,
-          percentiles: %{50 => 159793.0, 99 => 187407.0400000001},
-          mode: 157876,
-          minimum: 156084,
-          maximum: 3296019,
-          relative_more: 1606.731570182019,
-          relative_less: 6.223814970454056e-4,
-          absolute_difference: 161449.6127224443,
-          sample_size: 30911
+          average: 46218.21179398885,
+          ips: 21636.49265482963,
+          std_dev: 23273.59268348673,
+          std_dev_ratio: 0.5035589171477574,
+          std_dev_ips: 10895.248812141415,
+          median: 30583.0,
+          percentiles: %{50 => 30583.0, 99 => 105302.3999999999},
+          mode: 28874,
+          minimum: 28291,
+          maximum: 890313,
+          relative_more: 475.68303762144376,
+          relative_less: 0.0021022401912842983,
+          absolute_difference: 46121.05001158624,
+          sample_size: 106868
         },
-        samples: [191293, 174626, 166668, 183710, 173959, 166251, 171917, 195126, 174293, 175001,
-         187709, 169209, 169959, 164959, 168834, 164375, 164918, 186543, 168210, 168709, 164126,
-         167751, 163792, 165834, 167626, 173042, 175501, 163292, 178959, 166001, 167584, ...]
+        samples: [38166, 65832, 98123, 39999, 73415, 100789, 54040, 36208, 33124, 32957, 43249,
+         92165, 101540, 96415, 90123, 99080, 57082, 33374, 90498, 67916, 32916, 32624, 33082, 32583,
+         32624, 59124, 83998, 74498, 72831, 85415, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -433,7 +570,7 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       job_name: "Elixir.Mnishiguchi.Fibonacci01",
       function: &Mnishiguchi.Fibonacci01.calc/1,
       input_name: "n",
-      input: 40,
+      input: 20,
       before_each: nil,
       after_each: nil,
       before_scenario: nil,
@@ -441,22 +578,24 @@ Elixir.Mnishiguchi.Fibonacci01     0.00000 M - 15493024.76x slower +1557758925.7
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 1557759026.25,
-          ips: 0.6419478129472338,
-          std_dev: 243452434.85796496,
-          std_dev_ratio: 0.1562837581137495,
-          std_dev_ips: 0.100326016720296,
-          median: 1675952304.0,
-          percentiles: %{50 => 1675952304.0, 99 => 1686473717.0},
-          mode: nil,
-          minimum: 1192657780,
-          maximum: 1686473717,
-          relative_more: 15493024.758664506,
-          relative_less: 6.454517536614327e-8,
-          absolute_difference: 1557758925.7041705,
-          sample_size: 4
+          average: 70975.74099115196,
+          ips: 14089.321027654545,
+          std_dev: 33917.71197494081,
+          std_dev_ratio: 0.4778775325384639,
+          std_dev_ips: 6732.969967837848,
+          median: 52041.0,
+          percentiles: %{50 => 52041.0, 99 => 160596.99999999977},
+          mode: 51999,
+          minimum: 51124,
+          maximum: 1060851,
+          relative_more: 730.4903145667587,
+          relative_less: 0.0013689435438895353,
+          absolute_difference: 70878.57920874935,
+          sample_size: 69959
         },
-        samples: [1192657780, 1675066111, 1686473717, 1676838497]
+        samples: [52124, 51666, 51874, 51956, 52041, 52124, 51999, 51832, 51791, 51873, 51791,
+         51833, 51749, 51790, 51749, 51790, 51956, 51707, 52541, 51874, 51624, 51666, 51748, 51665,
+         51915, 51832, 51915, 51916, 51790, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
