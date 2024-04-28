@@ -90,17 +90,13 @@ defmodule mod do
 
   def calc(number, lookup) when number in 0..1, do: {number, lookup}
 
-  def calc(number, lookup) do
-    case lookup[number] do
-      nil ->
-        {value1, lookup} = calc(number - 1, lookup)
-        {value2, lookup} = calc(number - 2, lookup)
-        value = value1 + value2
-        {value, Map.put(lookup, number, value)}
+  def calc(number, lookup) when is_map_key(lookup, number), do: {lookup[number], lookup}
 
-      value ->
-        {value, lookup}
-    end
+  def calc(number, lookup) do
+    {value1, lookup} = calc(number - 1, lookup)
+    {value2, lookup} = calc(number - 2, lookup)
+    value = value1 + value2
+    {value, Map.put(lookup, number, value)}
   end
 end
 
@@ -232,18 +228,18 @@ Formatting results...
 
 ##### With input n #####
 Name                                                    ips        average  deviation         median         99th %
-Elixir.MnishiguchiFib.NonexponentialRecursion       14.13 M       70.75 ns ±11194.39%          83 ns          84 ns
-Elixir.MnishiguchiFib.Formula                        3.94 M      254.08 ns ±14252.32%         167 ns         292 ns
-Elixir.MnishiguchiFib.MemoWithMap                    1.25 M      801.18 ns  ±1682.74%         750 ns         918 ns
-Elixir.MnishiguchiFib.MemoWithEts                    0.33 M     2987.77 ns   ±312.58%        2875 ns        3292 ns
-Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M    51913.96 ns     ±9.88%       51293 ns    61857.60 ns
+Elixir.MnishiguchiFib.NonexponentialRecursion       14.64 M       68.32 ns  ±5446.49%          83 ns          84 ns
+Elixir.MnishiguchiFib.Formula                        4.12 M      242.49 ns ±13368.11%         167 ns         292 ns
+Elixir.MnishiguchiFib.MemoWithMap                    1.19 M      841.73 ns  ±1609.64%         791 ns        1000 ns
+Elixir.MnishiguchiFib.MemoWithEts                    0.34 M     2934.75 ns   ±321.22%        2833 ns        3250 ns
+Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M    59742.21 ns    ±33.65%       51418 ns   121377.03 ns
 
 Comparison: 
-Elixir.MnishiguchiFib.NonexponentialRecursion       14.13 M
-Elixir.MnishiguchiFib.Formula                        3.94 M - 3.59x slower +183.34 ns
-Elixir.MnishiguchiFib.MemoWithMap                    1.25 M - 11.32x slower +730.43 ns
-Elixir.MnishiguchiFib.MemoWithEts                    0.33 M - 42.23x slower +2917.02 ns
-Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M - 733.79x slower +51843.21 ns
+Elixir.MnishiguchiFib.NonexponentialRecursion       14.64 M
+Elixir.MnishiguchiFib.Formula                        4.12 M - 3.55x slower +174.17 ns
+Elixir.MnishiguchiFib.MemoWithMap                    1.19 M - 12.32x slower +773.41 ns
+Elixir.MnishiguchiFib.MemoWithEts                    0.34 M - 42.96x slower +2866.43 ns
+Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59673.89 ns
 ```
 
 <!-- livebook:{"output":true} -->
@@ -297,23 +293,23 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M - 733.79x slower +51
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 70.74776729213926,
-          ips: 14134721.67779787,
-          std_dev: 7919.783772600181,
-          std_dev_ratio: 111.94393937404358,
-          std_dev_ips: 1582296426.5683844,
+          average: 68.3178095947408,
+          ips: 14637471.633414041,
+          std_dev: 3720.9213628303773,
+          std_dev_ratio: 54.46488089859397,
+          std_dev_ips: 797228149.1704434,
           median: 83.0,
           percentiles: %{50 => 83.0, 99 => 84.0},
           mode: 83,
           minimum: 0,
-          maximum: 29904701,
+          maximum: 6890162,
           relative_more: nil,
           relative_less: nil,
           absolute_difference: nil,
-          sample_size: 17631841
+          sample_size: 18100687
         },
-        samples: [541, 125, 83, 42, 83, 41, 42, 84, 83, 41, 42, 84, 83, 83, 42, 42, 83, 83, 84, 42,
-         42, 83, 83, 84, 42, 42, 83, 83, 84, 83, 41, 42, 84, ...]
+        samples: [459, 84, 83, 41, 83, 83, 83, 83, 83, 83, 83, 83, 83, 42, 84, 83, 41, 83, 42, 42,
+         42, 84, 83, 83, 42, 42, 83, 83, 84, 83, 41, 42, 84, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -367,23 +363,23 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M - 733.79x slower +51
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 254.08442711876663,
-          ips: 3935699.6858865744,
-          std_dev: 36212.93048015976,
-          std_dev_ratio: 142.52321911579713,
-          std_dev_ips: 560928588.7055862,
+          average: 242.49230009811606,
+          ips: 4123842.2811585558,
+          std_dev: 32416.627141236746,
+          std_dev_ratio: 133.6810576175841,
+          std_dev_ips: 551279597.5933863,
           median: 167.0,
           percentiles: %{50 => 167.0, 99 => 292.0},
           mode: 167,
           minimum: 83,
-          maximum: 59729817,
-          relative_more: 3.591412659986484,
-          relative_less: 0.2784419655088489,
-          absolute_difference: 183.33665982662737,
-          sample_size: 12279526
+          maximum: 58318283,
+          relative_more: 3.5494741640074987,
+          relative_less: 0.28173187176293174,
+          absolute_difference: 174.17449050337527,
+          sample_size: 12655421
         },
-        samples: [2292, 167, 208, 166, 166, 209, 166, 167, 167, 166, 1459, 250, 167, 166, 167, 208,
-         167, 167, 166, 167, 166, 167, 167, 166, 167, 166, 167, 166, 167, 167, 1083, 167, ...]
+        samples: [1791, 166, 166, 167, 167, 166, 209, 166, 167, 167, 1125, 208, 166, 209, 166, 167,
+         208, 167, 167, 208, 167, 166, 167, 208, 167, 167, 208, 167, 166, 167, 1125, 208, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -437,24 +433,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M - 733.79x slower +51
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 801.1754786878271,
-          ips: 1248166.0093214656,
-          std_dev: 13481.668886774649,
-          std_dev_ratio: 16.82736085339888,
-          std_dev_ips: 21003339.843799133,
-          median: 750.0,
-          percentiles: %{50 => 750.0, 99 => 918.0},
+          average: 841.7291234517039,
+          ips: 1188030.6527820611,
+          std_dev: 13548.804725937716,
+          std_dev_ratio: 16.096395322972462,
+          std_dev_ips: 19123011.04298909,
+          median: 791.0,
+          percentiles: %{50 => 791.0, 99 => 1000.0},
           mode: 750,
-          minimum: 625,
-          maximum: 18105258,
-          relative_more: 11.324392406328917,
-          relative_less: 0.08830495836943317,
-          absolute_difference: 730.4277113956878,
-          sample_size: 5217910
+          minimum: 666,
+          maximum: 16719517,
+          relative_more: 12.320786167542781,
+          relative_less: 0.08116365192948047,
+          absolute_difference: 773.4113138569631,
+          sample_size: 5005018
         },
-        samples: [2792, 1292, 1793, 1084, 1042, 1375, 1042, 1083, 1292, 1000, 1000, 1208, 1000, 958,
-         1125, 958, 3875, 1166, 1042, 1042, 1167, 1000, 959, 1167, 1000, 958, 1125, 1000, 959, 1167,
-         958, ...]
+        samples: [3250, 1541, 1750, 1125, 1125, 1458, 1083, 1125, 1333, 1041, 1042, 1209, 1042,
+         1000, 1167, 1000, 1000, 1125, 1000, 1000, 1167, 958, 4041, 1166, 1083, 1083, 1208, 1041,
+         1000, 1166, 1000, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -508,24 +504,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M - 733.79x slower +51
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 2987.767226952689,
-          ips: 334698.09527964104,
-          std_dev: 9339.178750551533,
-          std_dev_ratio: 3.125805339285696,
-          std_dev_ips: 1046201.0932738546,
-          median: 2875.0,
-          percentiles: %{50 => 2875.0, 99 => 3292.0},
-          mode: 2875,
-          minimum: 2750,
-          maximum: 6279647,
-          relative_more: 42.23125819102221,
-          relative_less: 0.0236791429579663,
-          absolute_difference: 2917.0194596605497,
-          sample_size: 1573958
+          average: 2934.752598687604,
+          ips: 340744.22506591916,
+          std_dev: 9426.91950942308,
+          std_dev_ratio: 3.212168382997162,
+          std_dev_ips: 1094527.8264456147,
+          median: 2833.0,
+          percentiles: %{50 => 2833.0, 99 => 3250.0},
+          mode: 2792,
+          minimum: 2666,
+          maximum: 6418483,
+          relative_more: 42.957357914377944,
+          relative_less: 0.023278899088560966,
+          absolute_difference: 2866.434789092863,
+          sample_size: 1599365
         },
-        samples: [8750, 2917, 2875, 2917, 2917, 2875, 3250, 2875, 2875, 3292, 2875, 8667, 3500,
-         3000, 2917, 3209, 2916, 2958, 3250, 2917, 2917, 3209, 2959, 3125, 3167, 3042, 3042, 3084,
-         2876, 2875, ...]
+        samples: [6208, 2875, 2875, 3042, 2792, 2959, 3293, 2959, 2834, 3250, 2792, 7708, 3667,
+         2875, 2875, 3208, 2916, 2917, 3168, 2917, 2875, 3208, 2875, 3084, 3209, 2875, 2875, 3417,
+         2875, 2833, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -579,24 +575,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0193 M - 733.79x slower +51
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 51913.95763197666,
-          ips: 19262.642372386672,
-          std_dev: 5128.819463085868,
-          std_dev_ratio: 0.0987946151099593,
-          std_dev_ips: 1903.0453391807343,
-          median: 51293.0,
-          percentiles: %{50 => 51293.0, 99 => 61857.599999999744},
-          mode: 51001,
-          minimum: 50710,
-          maximum: 529554,
-          relative_more: 733.7893423209807,
-          relative_less: 0.0013627889399933136,
-          absolute_difference: 51843.20986468452,
-          sample_size: 95945
+          average: 59742.20787567749,
+          ips: 16738.58458798481,
+          std_dev: 20103.49820532845,
+          std_dev_ratio: 0.3365041052242911,
+          std_dev_ips: 5632.602429500937,
+          median: 51418.0,
+          percentiles: %{50 => 51418.0, 99 => 121377.03},
+          mode: 51376,
+          minimum: 50792,
+          maximum: 633348,
+          relative_more: 874.4748730977542,
+          relative_less: 0.001143543434767409,
+          absolute_difference: 59673.89006608275,
+          sample_size: 83396
         },
-        samples: [61084, 54168, 54085, 53959, 52043, 51459, 51501, 51586, 51584, 51376, 51251,
-         51460, 51376, 51460, 51501, 51543, 52210, 54001, 54418, 51668, 51543, 51334, 51251, 51251,
-         51542, 51793, 51459, 51501, 51293, ...]
+        samples: [51668, 51168, 51168, 51544, 51792, 51376, 52960, 57794, 53001, 54918, 54627,
+         54584, 54126, 52876, 52918, 52959, 52959, 52792, 53752, 52959, 53084, 52792, 52918, 52751,
+         53459, 54417, 54585, 54626, 54584, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
