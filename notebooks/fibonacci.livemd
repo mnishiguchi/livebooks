@@ -41,11 +41,11 @@ end
 mod = MnishiguchiFib.NonexponentialRecursion
 
 defmodule mod do
-  def calc(n, a \\ 0, b \\ 1)
+  def calc(n, prev_acc \\ 0, acc \\ 1)
   def calc(n, _, _) when n < 0, do: :error
-  def calc(n, a, b) when n > 1, do: calc(n - 1, b, a + b)
   def calc(0, _, _), do: 0
-  def calc(_, _, b), do: b
+  def calc(1, _, acc), do: acc
+  def calc(n, prev_acc, acc), do: calc(n - 1, acc, prev_acc + acc)
 end
 
 0..20 |> Enum.map(&mod.calc/1)
@@ -220,6 +220,13 @@ Estimated total run time: 35 s
 
 Benchmarking Elixir.MnishiguchiFib.SimpleRecursion with input n ...
 Benchmarking Elixir.MnishiguchiFib.NonexponentialRecursion with input n ...
+Warning: The function you are trying to benchmark is super fast, making measurements more unreliable!
+This holds especially true for memory measurements or when running with hooks.
+
+See: https://github.com/bencheeorg/benchee/wiki/Benchee-Warnings#fast-execution-warning
+
+You may disable this warning by passing print: [fast_warning: false] as configuration options.
+
 Benchmarking Elixir.MnishiguchiFib.Formula with input n ...
 Benchmarking Elixir.MnishiguchiFib.MemoWithMap with input n ...
 Benchmarking Elixir.MnishiguchiFib.MemoWithEts with input n ...
@@ -228,18 +235,18 @@ Formatting results...
 
 ##### With input n #####
 Name                                                    ips        average  deviation         median         99th %
-Elixir.MnishiguchiFib.NonexponentialRecursion       14.64 M       68.32 ns  ±5446.49%          83 ns          84 ns
-Elixir.MnishiguchiFib.Formula                        4.12 M      242.49 ns ±13368.11%         167 ns         292 ns
-Elixir.MnishiguchiFib.MemoWithMap                    1.19 M      841.73 ns  ±1609.64%         791 ns        1000 ns
-Elixir.MnishiguchiFib.MemoWithEts                    0.34 M     2934.75 ns   ±321.22%        2833 ns        3250 ns
-Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M    59742.21 ns    ±33.65%       51418 ns   121377.03 ns
+Elixir.MnishiguchiFib.NonexponentialRecursion       17.63 M       56.72 ns  ±3839.40%       54.20 ns       70.80 ns
+Elixir.MnishiguchiFib.Formula                        3.99 M      250.38 ns ±13617.62%         167 ns         333 ns
+Elixir.MnishiguchiFib.MemoWithMap                    1.17 M      856.69 ns  ±1588.02%         791 ns        1000 ns
+Elixir.MnishiguchiFib.MemoWithEts                    0.34 M     2957.96 ns   ±330.84%        2875 ns        3250 ns
+Elixir.MnishiguchiFib.SimpleRecursion              0.0192 M    51955.08 ns     ±7.29%       51334 ns       62543 ns
 
 Comparison: 
-Elixir.MnishiguchiFib.NonexponentialRecursion       14.64 M
-Elixir.MnishiguchiFib.Formula                        4.12 M - 3.55x slower +174.17 ns
-Elixir.MnishiguchiFib.MemoWithMap                    1.19 M - 12.32x slower +773.41 ns
-Elixir.MnishiguchiFib.MemoWithEts                    0.34 M - 42.96x slower +2866.43 ns
-Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59673.89 ns
+Elixir.MnishiguchiFib.NonexponentialRecursion       17.63 M
+Elixir.MnishiguchiFib.Formula                        3.99 M - 4.41x slower +193.66 ns
+Elixir.MnishiguchiFib.MemoWithMap                    1.17 M - 15.10x slower +799.97 ns
+Elixir.MnishiguchiFib.MemoWithEts                    0.34 M - 52.15x slower +2901.23 ns
+Elixir.MnishiguchiFib.SimpleRecursion              0.0192 M - 915.93x slower +51898.36 ns
 ```
 
 <!-- livebook:{"output":true} -->
@@ -293,23 +300,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 68.3178095947408,
-          ips: 14637471.633414041,
-          std_dev: 3720.9213628303773,
-          std_dev_ratio: 54.46488089859397,
-          std_dev_ips: 797228149.1704434,
-          median: 83.0,
-          percentiles: %{50 => 83.0, 99 => 84.0},
-          mode: 83,
-          minimum: 0,
-          maximum: 6890162,
+          average: 56.72362881385124,
+          ips: 17629337.56021991,
+          std_dev: 2177.8450145095926,
+          std_dev_ratio: 38.39396491463163,
+          std_dev_ips: 676860167.7552809,
+          median: 54.2,
+          percentiles: %{50 => 54.2, 99 => 70.8},
+          mode: 54.2,
+          minimum: 41.6,
+          maximum: 4986000.6,
           relative_more: nil,
           relative_less: nil,
           absolute_difference: nil,
-          sample_size: 18100687
+          sample_size: 5726842
         },
-        samples: [459, 84, 83, 41, 83, 83, 83, 83, 83, 83, 83, 83, 83, 42, 84, 83, 41, 83, 42, 42,
-         42, 84, 83, 83, 42, 42, 83, 83, 84, 83, 41, 42, 84, ...]
+        samples: [91.7, 58.4, 54.1, 54.1, 54.1, 54.2, 54.2, 50.0, 54.1, 54.2, 54.2, 54.2, 54.1,
+         54.1, 54.1, 445.8, 50.0, 62.5, 58.4, 62.5, 58.3, 58.4, 58.4, 54.2, 54.2, 54.2, 58.3, 58.3,
+         54.2, 54.2, 66.7, 54.2, 54.2, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -363,23 +371,23 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 242.49230009811606,
-          ips: 4123842.2811585558,
-          std_dev: 32416.627141236746,
-          std_dev_ratio: 133.6810576175841,
-          std_dev_ips: 551279597.5933863,
+          average: 250.37981430461147,
+          ips: 3993932.189690829,
+          std_dev: 34095.77576373041,
+          std_dev_ratio: 136.1762163552433,
+          std_dev_ips: 543878573.9715089,
           median: 167.0,
-          percentiles: %{50 => 167.0, 99 => 292.0},
+          percentiles: %{50 => 167.0, 99 => 333.0},
           mode: 167,
           minimum: 83,
-          maximum: 58318283,
-          relative_more: 3.5494741640074987,
-          relative_less: 0.28173187176293174,
-          absolute_difference: 174.17449050337527,
-          sample_size: 12655421
+          maximum: 61531745,
+          relative_more: 4.414030264641173,
+          relative_less: 0.22655032703571468,
+          absolute_difference: 193.65618549076024,
+          sample_size: 12329870
         },
-        samples: [1791, 166, 166, 167, 167, 166, 209, 166, 167, 167, 1125, 208, 166, 209, 166, 167,
-         208, 167, 167, 208, 167, 166, 167, 208, 167, 167, 208, 167, 166, 167, 1125, 208, ...]
+        samples: [2625, 208, 208, 167, 209, 209, 20583, 250, 208, 167, 1250, 250, 166, 208, 167,
+         209, 167, 208, 208, 208, 167, 209, 208, 250, 209, 208, 166, 167, 209, 208, 1125, 166, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -433,24 +441,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 841.7291234517039,
-          ips: 1188030.6527820611,
-          std_dev: 13548.804725937716,
-          std_dev_ratio: 16.096395322972462,
-          std_dev_ips: 19123011.04298909,
+          average: 856.6918655303979,
+          ips: 1167280.839512672,
+          std_dev: 13604.451314142527,
+          std_dev_ratio: 15.880215351081564,
+          std_dev_ips: 18536671.10665251,
           median: 791.0,
           percentiles: %{50 => 791.0, 99 => 1000.0},
           mode: 750,
           minimum: 666,
-          maximum: 16719517,
-          relative_more: 12.320786167542781,
-          relative_less: 0.08116365192948047,
-          absolute_difference: 773.4113138569631,
-          sample_size: 5005018
+          maximum: 17205290,
+          relative_more: 15.102910082529908,
+          relative_less: 0.06621240506203747,
+          absolute_difference: 799.9682367165466,
+          sample_size: 4893091
         },
-        samples: [3250, 1541, 1750, 1125, 1125, 1458, 1083, 1125, 1333, 1041, 1042, 1209, 1042,
-         1000, 1167, 1000, 1000, 1125, 1000, 1000, 1167, 958, 4041, 1166, 1083, 1083, 1208, 1041,
-         1000, 1166, 1000, ...]
+        samples: [2792, 1292, 1750, 1125, 1084, 1459, 1125, 1083, 1333, 1041, 1042, 1209, 1041,
+         1000, 1166, 1000, 958, 1208, 1042, 959, 1167, 1000, 4542, 1209, 1125, 1084, 1291, 1042,
+         1000, 1208, 1042, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -504,24 +512,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 2934.752598687604,
-          ips: 340744.22506591916,
-          std_dev: 9426.91950942308,
-          std_dev_ratio: 3.212168382997162,
-          std_dev_ips: 1094527.8264456147,
-          median: 2833.0,
-          percentiles: %{50 => 2833.0, 99 => 3250.0},
-          mode: 2792,
-          minimum: 2666,
-          maximum: 6418483,
-          relative_more: 42.957357914377944,
-          relative_less: 0.023278899088560966,
-          absolute_difference: 2866.434789092863,
-          sample_size: 1599365
+          average: 2957.9568087869884,
+          ips: 338071.19733099965,
+          std_dev: 9786.25159189019,
+          std_dev_ratio: 3.308449793052718,
+          std_dev_ips: 1118491.5828468304,
+          median: 2875.0,
+          percentiles: %{50 => 2875.0, 99 => 3250.0},
+          mode: 2875,
+          minimum: 2708,
+          maximum: 6815615,
+          relative_more: 52.146819070656676,
+          relative_less: 0.019176625110057882,
+          absolute_difference: 2901.2331799731373,
+          sample_size: 1585253
         },
-        samples: [6208, 2875, 2875, 3042, 2792, 2959, 3293, 2959, 2834, 3250, 2792, 7708, 3667,
-         2875, 2875, 3208, 2916, 2917, 3168, 2917, 2875, 3208, 2875, 3084, 3209, 2875, 2875, 3417,
-         2875, 2833, ...]
+        samples: [10583, 3083, 3001, 3208, 2917, 2917, 3417, 2959, 3250, 3583, 3042, 59335, 23458,
+         10668, 3125, 3458, 3042, 3167, 3584, 2917, 2833, 3083, 2875, 3541, 3125, 2875, 2875, 3125,
+         2875, 2876, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
@@ -575,24 +583,24 @@ Elixir.MnishiguchiFib.SimpleRecursion              0.0167 M - 874.47x slower +59
       tag: nil,
       run_time_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
-          average: 59742.20787567749,
-          ips: 16738.58458798481,
-          std_dev: 20103.49820532845,
-          std_dev_ratio: 0.3365041052242911,
-          std_dev_ips: 5632.602429500937,
-          median: 51418.0,
-          percentiles: %{50 => 51418.0, 99 => 121377.03},
+          average: 51955.083857507954,
+          ips: 19247.3945907315,
+          std_dev: 3788.8924615142605,
+          std_dev_ratio: 0.07292630826861293,
+          std_dev_ips: 1403.6414312913184,
+          median: 51334.0,
+          percentiles: %{50 => 51334.0, 99 => 62543.0},
           mode: 51376,
-          minimum: 50792,
-          maximum: 633348,
-          relative_more: 874.4748730977542,
-          relative_less: 0.001143543434767409,
-          absolute_difference: 59673.89006608275,
-          sample_size: 83396
+          minimum: 50709,
+          maximum: 555427,
+          relative_more: 915.9337112935401,
+          relative_less: 0.0010917820663983817,
+          absolute_difference: 51898.3602286941,
+          sample_size: 95865
         },
-        samples: [51668, 51168, 51168, 51544, 51792, 51376, 52960, 57794, 53001, 54918, 54627,
-         54584, 54126, 52876, 52918, 52959, 52959, 52792, 53752, 52959, 53084, 52792, 52918, 52751,
-         53459, 54417, 54585, 54626, 54584, ...]
+        samples: [56751, 53917, 55584, 56460, 52751, 51418, 51416, 51376, 51376, 51334, 51376,
+         51334, 51376, 51375, 51376, 51501, 51418, 51334, 52167, 51334, 51542, 51542, 51251, 51501,
+         51459, 51251, 51376, 51501, 51418, ...]
       },
       memory_usage_data: %Benchee.CollectionData{
         statistics: %Benchee.Statistics{
