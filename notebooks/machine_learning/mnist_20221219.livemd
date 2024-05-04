@@ -13,37 +13,37 @@ Mix.install([
 
 ## 概要
 
-* 教師あり学習（MNIST手書き文字識別）
-* 多クラス分類
+- 教師あり学習（MNIST 手書き文字識別）
+- 多クラス分類
 
 ## 資料
 
-* [Elixirでディープラーニング①：手書き文字識別（MNIST）をLivebook＋Axonで](https://qiita.com/piacerex/items/9cf4f328222103458167) by piacerex
-* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+- [Elixir でディープラーニング ①：手書き文字識別（MNIST）を Livebook ＋ Axon で](https://qiita.com/piacerex/items/9cf4f328222103458167) by piacerex
+- [Elixir 生誕 10 周年祭 ■ 第 3 弾：Elixir／Livebook ＋ Nx で Python っぽく AI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
 
-## MNIST手書き文字識別
+## MNIST 手書き文字識別
 
-* 手書き文字画像が、0～9の数字のうち、どの数字により適合するかを識別する
-* MNISTデータセット
-  * 60,000文字分のデータ
-  * 手書き文字画像（1文字は28 x 28ピクセル）
-  * それぞれの画像が何の数字であるかが0～9で入っているラベル
+- 手書き文字画像が、0 ～ 9 の数字のうち、どの数字により適合するかを識別する
+- MNIST データセット
+  - 60,000 文字分のデータ
+  - 手書き文字画像（1 文字は 28 x 28 ピクセル）
+  - それぞれの画像が何の数字であるかが 0 ～ 9 で入っているラベル
 
 ![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2Fb43f7923-a21e-674b-b639-adf249835d80.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=7000b9464b86518b6e0051ed38486a78)
 
 ## ⅰ）学習データと検証データの準備
 
-60000文字分データをダウンロードし、学習データを検証データに分割
+60000 文字分データをダウンロードし、学習データを検証データに分割
 
 <!-- livebook:{"break_markdown":true} -->
 
-### MNISTデータセットをダウンロード
+### MNIST データセットをダウンロード
 
 ```elixir
 {datas_raw, labels_raw} = Scidata.MNIST.download()
 ```
 
-### 手書き文字画像データを1文字ずつで扱えるようにする
+### 手書き文字画像データを 1 文字ずつで扱えるようにする
 
 ```elixir
 {data_bins, type, shape} = datas_raw
@@ -66,7 +66,7 @@ datas =
 :ok
 ```
 
-### ラベルを1文字ずつで扱えるようにする
+### ラベルを 1 文字ずつで扱えるようにする
 
 ```elixir
 {label_bins, type, shape} = labels_raw
@@ -113,11 +113,11 @@ labels[index]
 
 ### 学習データと検証データの分割
 
-* 手書き文字データとラベルの両方を、学習データ80%、検証データ20%に分割
-* バッチ学習
-  * 学習速度・並列度アップ
-  * 過学習回避
-  * [【人工知能】機械学習で行われる学習方法について。バッチ・ミニバッチ・オンライン学習。](https://fresopiya.com/2019/05/24/batchlearning/)
+- 手書き文字データとラベルの両方を、学習データ 80%、検証データ 20%に分割
+- バッチ学習
+  - 学習速度・並列度アップ
+  - 過学習回避
+  - [【人工知能】機械学習で行われる学習方法について。バッチ・ミニバッチ・オンライン学習。](https://fresopiya.com/2019/05/24/batchlearning/)
 
 ```elixir
 {train_datas, test_datas} =
@@ -139,7 +139,7 @@ labels[index]
 :ok
 ```
 
-### N番目のバッチの全32文字の手書き文字画像をヒートマップ表示
+### N 番目のバッチの全 32 文字の手書き文字画像をヒートマップ表示
 
 ```elixir
 batch_index_input = Kino.Input.number("Batch index", default: 0)
@@ -169,12 +169,12 @@ end
 
 ### 資料
 
-* [Axon](https://hexdocs.pm/axon/Axon.html)
-* [活性化関数（Activation function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2003/26/news012.html)
-* [［活性化関数］ソフトマックス関数（Softmax function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2004/08/news016.html)
-* [Dropout：ディープラーニングの火付け役、単純な方法で過学習を防ぐ](https://deepage.net/deep_learning/2016/10/17/deeplearning_dropout.html)
-* [機械学習入門者向け 分類と回帰の違いをプログラムを書いて学ぼう](https://avinton.com/academy/classification-regression/)
-* [deep learningの基礎（Early Stopping)](https://note.com/shantiboy/n/n32360fe14fd4)
+- [Axon](https://hexdocs.pm/axon/Axon.html)
+- [活性化関数（Activation function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2003/26/news012.html)
+- [［活性化関数］ソフトマックス関数（Softmax function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2004/08/news016.html)
+- [Dropout：ディープラーニングの火付け役、単純な方法で過学習を防ぐ](https://deepage.net/deep_learning/2016/10/17/deeplearning_dropout.html)
+- [機械学習入門者向け 分類と回帰の違いをプログラムを書いて学ぼう](https://avinton.com/academy/classification-regression/)
+- [deep learning の基礎（Early Stopping)](https://note.com/shantiboy/n/n32360fe14fd4)
 
 ```elixir
 require Axon
@@ -197,8 +197,8 @@ Axon.Display.as_table(model, Nx.template({1, 784}, :f32))
 
 ### モデルの学習
 
-* Axon.Loopモジュールにある学習機能を使って、モデルの学習を行う
-* 学習試行回数であるエポック数は、5～10回にして、精度向上したいが、今回はAxonをGPUと比べて実行が遅いCPUモードで動かすことから、3回のみとする
+- Axon.Loop モジュールにある学習機能を使って、モデルの学習を行う
+- 学習試行回数であるエポック数は、5 ～ 10 回にして、精度向上したいが、今回は Axon を GPU と比べて実行が遅い CPU モードで動かすことから、3 回のみとする
 
 ```elixir
 epochs_input = Kino.Input.number("Epochs", default: 3)
@@ -270,7 +270,7 @@ model
 )
 ```
 
-### 1文字ずつの予測の一致チェック
+### 1 文字ずつの予測の一致チェック
 
 ```elixir
 index_input = Kino.Input.number("Index", default: 0)

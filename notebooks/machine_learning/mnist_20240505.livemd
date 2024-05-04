@@ -1,0 +1,314 @@
+# MNIST手書き文字識別
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.5"},
+  {:axon, "~> 0.5"},
+  {:exla, "~> 0.5"},
+  {:scidata, "~> 0.1"},
+  {:table_rex, "~> 3.1.1"},
+  {:kino, "~> 0.8"},
+  {:kino_vega_lite, "~> 0.1.7"}
+])
+
+# This ensures that all of your defn compiled code makes use of the EXLA backend.
+Nx.default_backend(EXLA.Backend)
+```
+
+## 概要
+
+* 教師あり学習
+* 多クラス分類
+
+## 資料
+
+* [Machine Learning in Elixir](https://pragprog.com/titles/smelixir/machine-learning-in-elixir) by Sean Moriarity
+* [Elixirでディープラーニング①：手書き文字識別（MNIST）をLivebook＋Axonで](https://qiita.com/piacerex/items/9cf4f328222103458167) by piacerex
+* [Elixir生誕10周年祭■第3弾：Elixir／Livebook＋NxでPythonっぽくAI・ML](https://qiita.com/piacerex/items/ccfc7198f08d06433fbc) by piacerex
+
+## MNIST手書き文字識別
+
+* 手書き文字画像が、0～9の数字のうち、どの数字により適合するかを識別する
+* MNISTデータセット
+  * 60,000文字分のデータ
+  * 手書き文字画像（1文字は28 x 28ピクセル）
+  * それぞれの画像が何の数字であるかが0～9で入っているラベル
+
+![](https://qiita-user-contents.imgix.net/https%3A%2F%2Fqiita-image-store.s3.ap-northeast-1.amazonaws.com%2F0%2F155423%2Fb43f7923-a21e-674b-b639-adf249835d80.png?ixlib=rb-4.0.0&auto=format&gif-q=60&q=75&w=1400&fit=max&s=7000b9464b86518b6e0051ed38486a78)
+
+## 学習データと検証データの準備
+
+60000文字分データをダウンロードし、学習データを検証データに分割
+
+<!-- livebook:{"break_markdown":true} -->
+
+### MNISTデータセットをダウンロード
+
+<!-- livebook:{"break_markdown":true} -->
+
+* Scidata is not designed to be Nx-aware
+* images and labels consist of tuples of the form `{data, type, shape}`
+
+```elixir
+{raw_data_binary, raw_label_binary} = Scidata.MNIST.download()
+```
+
+### 手書き文字画像データを1文字ずつで扱えるようにする
+
+```elixir
+{image_data, image_type, image_shape} = raw_data_binary
+
+# 60,000文字分の手書き文字画像のバイナリ
+# 一文字分の手書き文字画像データは、784ピクセル（28 x 28）の1次元行列
+<<_::binary>> = image_data
+{:u, 8} = image_type
+# 文字数、バイナリの次元数、横ピクセル数、縦ピクセル数
+{60000, 1, 28, 28} = image_shape
+
+images =
+  image_data
+  # transform raw data into an Nx tensor
+  |> Nx.from_binary(image_type)
+  # rescale pixel values to be between 0 and 1
+  |> Nx.divide(255)
+  # reshape the entire images tensor into a collection of 60,000 image vector representations
+  |> Nx.reshape({60000, :auto})
+  |> dbg()
+
+:ok
+```
+
+### ラベルを1文字ずつで扱えるようにする
+
+```elixir
+# labels consists of 60_000 labels from 0 to 9
+{label_data, label_type, label_shape} = raw_label_binary
+
+# 60,000文字分の手書き文字画像のラベル
+<<_::binary>> = label_data
+{:u, 8} = label_type
+{60000} = label_shape
+
+labels =
+  label_data
+  # transform raw data into an Nx tensor
+  |> Nx.from_binary(label_type)
+  # reshape the entire lablels tensor into a collection of 60,000 label value representations
+  |> Nx.reshape(label_shape)
+  # 1文字ずつで扱えるように分解
+  |> Nx.new_axis(-1)
+  # ラベルを数値からクラス行列に変形 (one-hot encoding)
+  |> Nx.equal(Nx.iota({1, 10}))
+  |> dbg()
+
+:ok
+```
+
+#### 手書き文字画像をヒートマップ表示
+
+```elixir
+index_input = Kino.Input.number("Index", default: 0)
+```
+
+```elixir
+index = Kino.Input.read(index_input)
+
+# ヒートマップ表示
+images[index] |> Nx.reshape({28, 28}) |> Nx.to_heatmap() |> dbg()
+
+# ラベルを確認
+labels[index] |> IO.inspect(label: "label")
+
+:ok
+```
+
+### 学習データと検証データの分割
+
+* 手書き文字データとラベルの両方を、学習データ50000、検証データ10000に分割
+* バッチ学習
+  * 学習速度・並列度アップ
+  * 過学習回避
+  * [【人工知能】機械学習で行われる学習方法について。バッチ・ミニバッチ・オンライン学習。](https://fresopiya.com/2019/05/24/batchlearning/)
+
+```elixir
+train_range = 0..49_999//1
+test_range = 50_000..-1//1
+
+train_images = images[train_range]
+train_labels = labels[train_range]
+test_images = images[test_range]
+test_labels = labels[test_range]
+
+:ok
+```
+
+### バッチ化
+
+* Axon offers a training API that performs minibatch stochastic gradient descent
+* ML algorithms often iteratively update models on the training set using optimization techniques, such as gradient descent
+* To perform gradient descent on minibatches, you need to turn your data into minibatches as well
+
+```elixir
+# This code creates both train and test datasets that 
+# consist of minibatches of tuples {input, target}, 
+# which is the format expected by Axon.
+
+batch_size = 64
+
+train_data_batches =
+  Stream.zip(
+    Nx.to_batched(train_images, batch_size),
+    Nx.to_batched(train_labels, batch_size)
+  )
+
+test_data_batches =
+  Stream.zip(
+    Nx.to_batched(test_images, batch_size),
+    Nx.to_batched(test_labels, batch_size)
+  )
+
+{train_data_batches, test_data_batches}
+```
+
+## モデルの設計
+
+学習データとラベルの関係性を学習するモデルを設計する
+
+### Axon
+
+* Allows you to build complex models by composing Axon layers
+* Creating models with Axon is relatively straightforward
+* The difficult part is developing an understanding of what combination of layers to use to create the best model
+* [Axon documentation](https://hexdocs.pm/axon/Axon.html)
+
+### Axon models
+
+* Just representations of computation graphs
+* You can manipulate and compose before passing to Axon's execution and training APIs
+
+### 資料
+
+* [活性化関数（Activation function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2003/26/news012.html)
+* [［活性化関数］ソフトマックス関数（Softmax function）とは？](https://atmarkit.itmedia.co.jp/ait/articles/2004/08/news016.html)
+* [Dropout：ディープラーニングの火付け役、単純な方法で過学習を防ぐ](https://deepage.net/deep_learning/2016/10/17/deeplearning_dropout.html)
+* [機械学習入門者向け 分類と回帰の違いをプログラムを書いて学ぼう](https://avinton.com/academy/classification-regression/)
+* [deep learningの基礎（Early Stopping)](https://note.com/shantiboy/n/n32360fe14fd4)
+
+```elixir
+require Axon
+
+## 入力層
+# * Axonが期待するデータ構造
+# * Axon allows you to use nil as a placeholder for values that will be filled at inference time
+input = Axon.input("images", shape: {nil, 784})
+
+model =
+  input
+  ## 中間層
+  # * ReLU: 計算効率の良い活性化関数
+  |> Axon.dense(128, activation: :relu)
+  # * ランダムでニューラルネットワークの間引きを行うことで過学習回避を実現
+  |> Axon.dropout()
+  ## 出力層
+  # * softmax: 多クラス分類に向いている
+  |> Axon.dense(10, activation: :softmax)
+
+Axon.Display.as_graph(model, Nx.template({1, 784}, :f32))
+|> Kino.render()
+
+Axon.Display.as_table(model, Nx.template({1, 784}, :f32))
+|> IO.puts()
+```
+
+```elixir
+model |> IO.inspect(structs: false)
+```
+
+## モデルの学習
+
+* train your model on your training data
+* `Axon.Loop`モジュールにある学習機能を使って、モデルの学習を行う
+
+```elixir
+epochs_input = Kino.Input.number("Epochs", default: 3)
+```
+
+```elixir
+epochs = Kino.Input.read(epochs_input)
+
+# 損失関数
+loss = :categorical_cross_entropy
+# 最適化関数
+optimizer = :sgd
+
+trained_model_state =
+  model
+  # optimize model by minimizing loss using optimizer
+  |> Axon.Loop.trainer(loss, optimizer)
+  # 計算過程を表示するための処理
+  |> Axon.Loop.metric(:accuracy)
+  # init_stateに空マップを指定することで、学習モードとなる
+  |> Axon.Loop.run(train_data_batches, %{}, epochs: epochs, compiler: EXLA)
+```
+
+## 検証データによるモデルの評価
+
+予測とラベルの一致率を確認
+
+<!-- livebook:{"break_markdown":true} -->
+
+### 手書き文字画像全量での正解率チェック
+
+```elixir
+model
+# 正解率をチェック
+|> Axon.Loop.evaluator()
+# 計算過程を表示するための処理
+|> Axon.Loop.metric(:accuracy)
+# init_stateに学習済みモデルを指定することで、予測モードとなる
+|> Axon.Loop.run(test_data_batches, trained_model_state, compiler: EXLA)
+```
+
+### 1文字ずつの予測の一致チェック
+
+```elixir
+batch_index_input = Kino.Input.number("Batch Index", default: 0) |> Kino.render()
+image_index_input = Kino.Input.number("Image Index", default: 0)
+```
+
+```elixir
+batch_index = Kino.Input.read(batch_index_input)
+image_index = Kino.Input.read(image_index_input)
+
+{test_image_batch, test_label_batch} = test_data_batches |> Enum.at(batch_index)
+
+most_probable_label = test_label_batch[image_index]
+most_probable_label |> Nx.to_list() |> IO.inspect(label: "Most probable label")
+
+selected_test_image = test_image_batch[image_index]
+selected_test_image |> Nx.reshape({28, 28}) |> Nx.to_heatmap()
+```
+
+### モデルを使って予測してみる
+
+```elixir
+{_, predict_fn} = Axon.build(model, compiler: EXLA)
+
+probabilities =
+  selected_test_image
+  |> Nx.new_axis(0)
+  |> then(&predict_fn.(trained_model_state, &1))
+
+probabilities |> Nx.argmax() |> Nx.to_number()
+```
+
+```elixir
+probabilities =
+  selected_test_image
+  |> Nx.new_axis(0)
+  |> then(fn test_image ->
+    Axon.predict(model, trained_model_state, test_image)
+  end)
+
+probabilities |> Nx.argmax() |> Nx.to_number()
+```
