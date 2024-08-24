@@ -2,9 +2,9 @@
 
 ```elixir
 Mix.install([
-  {:bumblebee, "~> 0.3.0"},
-  {:req, "~> 0.3.0"},
-  {:kino, "~> 0.9.0"}
+  {:bumblebee, "~> 0.5.0"},
+  {:req, "~> 0.5.0"},
+  {:kino, "~> 0.13.0"}
 ])
 ```
 
@@ -34,7 +34,7 @@ destination_path = Path.join(downloads_dir, "elixir_logo" <> extname)
 ## Req (file)
 
 ```elixir
-Req.get!(source_url, output: destination_path)
+Req.get!(source_url, into: File.stream!(destination_path))
 File.read!(destination_path)
 ```
 
@@ -67,27 +67,24 @@ defmodule MNishiguchi.Utils.HTTP do
   defp finch_request(req_request, finch_request, finch_name, finch_options) do
     acc = Req.Response.new()
 
-    case Finch.stream(finch_request, finch_name, acc, &handle_message/2, finch_options) do
+    case Finch.stream(finch_request, finch_name, acc, &handle_finch_stream/2, finch_options) do
       {:ok, response} -> {req_request, response}
       {:error, exception} -> {req_request, exception}
     end
   end
 
-  defp handle_message({:status, status}, response), do: %{response | status: status}
+  defp handle_finch_stream({:status, status}, response), do: %{response | status: status}
 
-  defp handle_message({:headers, headers}, response) do
-    total_size =
-      Enum.find_value(headers, fn
-        {"content-length", v} -> String.to_integer(v)
-        {_k, _v} -> nil
-      end)
+  defp handle_finch_stream({:headers, headers}, response) do
+    req_headers = headers |> Enum.map(fn {k, v} -> {k, List.wrap(v)} end) |> Map.new()
+    total_size = req_headers |> Map.fetch!("content-length") |> List.first() |> String.to_integer
 
     response
-    |> Map.put(:headers, headers)
+    |> Map.put(:headers, req_headers)
     |> Map.put(:private, %{total_size: total_size, downloaded_size: 0})
   end
 
-  defp handle_message({:data, data}, response) do
+  defp handle_finch_stream({:data, data}, response) do
     new_downloaded_size = response.private.downloaded_size + byte_size(data)
     ProgressBar.render(new_downloaded_size, response.private.total_size, suffix: :bytes)
 
@@ -99,7 +96,7 @@ end
 ```
 
 ```elixir
-MNishiguchi.Utils.HTTP.download!(source_url, output: destination_path)
+MNishiguchi.Utils.HTTP.download!(source_url, into: File.stream!(destination_path))
 File.read!(destination_path)
 ```
 
